@@ -183,6 +183,8 @@ class Plattformer(arcade.Window):
         print("Kopieren, Verändern oder Verbreiten ohne meine Erlaubnis ist nicht gestattet!")
         print("Mehr Infos in der LICENSE-Datei!")
         print(line)
+        print("Ideen oder Bugs gerne auf GitHub melden: https://github.com/LeoGoettlinger/Prank-Jump-and-Run/issues")
+        print(line)
 
         # Die Abfrage
         check = input("Akzeptierst du die Bedingungen? (ja/nein): ").strip().lower()
