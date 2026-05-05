@@ -1,50 +1,66 @@
 @echo off
-echo ====================================================
-echo      It's a Prank Jump & Run - Setup (Windows)
-echo ====================================================
+echo =========================================================
+echo    It's a Prank Jump & Run - Auto-Installer (Windows)
+echo =========================================================
 echo.
 
-REM Pruefen, ob Python installiert ist
-python --version >nul 2>&1
-IF %ERRORLEVEL% NEQ 0 (
-    echo [FEHLER] Python ist nicht installiert oder nicht im PATH!
-    echo Bitte lade Python 3.12.2 von python.org herunter und setze den Haken bei "Add Python to PATH".
-    pause
-    exit /b
-)
-
-REM Pruefen, ob Git installiert ist
+:: 1. PRUEFEN UND INSTALLIEREN VON GIT
 git --version >nul 2>&1
-IF %ERRORLEVEL% NEQ 0 (
-    echo [FEHLER] Git ist nicht installiert oder nicht im PATH!
-    echo Bitte lade Git von git-scm.com herunter.
+if %errorlevel% neq 0 (
+    echo [INFO] Git ist nicht installiert. Starte automatischen Download via Winget...
+    winget install --id Git.Git -e --silent --accept-package-agreements --accept-source-agreements
+    echo.
+    echo =================================================================
+    echo [WICHTIG] Git wurde installiert! 
+    echo Windows muss die Pfade aktualisieren. 
+    echo Bitte SCHLIESSE dieses Fenster und STARTE DIESE DATEI NEU!
+    echo =================================================================
     pause
-    exit /b
+    exit
 )
 
-echo [1/4] Klone das GitHub Repository (Branch: main)...
-IF NOT EXIST "Prank-Jump-and-Run" (
+:: 2. PRUEFEN UND INSTALLIEREN VON PYTHON 3.12
+python --version >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [INFO] Python ist nicht installiert. Starte automatischen Download via Winget...
+    winget install --id Python.Python.3.12 -e --silent --accept-package-agreements --accept-source-agreements
+    echo.
+    echo =================================================================
+    echo [WICHTIG] Python wurde installiert! 
+    echo Windows muss die Pfade aktualisieren. 
+    echo Bitte SCHLIESSE dieses Fenster und STARTE DIESE DATEI NEU!
+    echo =================================================================
+    pause
+    exit
+)
+
+:: 3. REPOSITORY KLONEN
+echo [INFO] Git und Python sind bereit.
+if not exist "Prank-Jump-and-Run" (
+    echo [INFO] Lade Spiel-Dateien von GitHub herunter...
     git clone -b main https://github.com/LeoGoettlinger/Prank-Jump-and-Run.git
-) ELSE (
-    echo Ordner existiert bereits. Ziehe neueste Updates...
+) else (
+    echo [INFO] Spiel-Dateien existieren bereits. Suche nach Updates...
     cd Prank-Jump-and-Run
     git pull origin main
     cd ..
 )
 
-echo [2/4] Erstelle eine lokale virtuelle Python-Umgebung...
+:: 4. VIRTUELLE UMGEBUNG & SPIEL-ABHÄNGIGKEITEN INSTALLIEREN
+echo [INFO] Richte geschuetzte Python-Umgebung ein...
+cd Prank-Jump-and-Run
 python -m venv venv
-
-echo [3/4] Aktiviere die Umgebung und update pip...
 call venv\Scripts\activate
-python -m pip install --upgrade pip
 
-echo [4/4] Installiere Arcade 3.3.2 und Pyglet 2.0.17...
-pip install arcade==3.3.2 pyglet==2.0.17
+echo [INFO] Installiere Arcade und Pyglet...
+python -m pip install --upgrade pip --quiet
+pip install arcade==3.3.2 pyglet==2.0.17 --quiet
 
+:: 5. SPIEL STARTEN
 echo.
-echo ====================================================
-echo Setup erfolgreich abgeschlossen! 
-echo Du kannst das Spiel nun mit start.bat starten.
-echo ====================================================
+echo =========================================================
+echo Alles erfolgreich geladen! Das Spiel startet jetzt...
+echo =========================================================
+python Spiel.py
+
 pause
