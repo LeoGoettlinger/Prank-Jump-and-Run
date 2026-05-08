@@ -22,24 +22,21 @@ Ein actionreiches 2D Jump & Run Spiel, entwickelt mit Python und der Arcade-Bibl
 Dieses Projekt installiert alle nötigen Abhängigkeiten fast von selbst. Die Skripte prüfen, ob **Git** und **Python** vorhanden sind und richten eine isolierte Spielumgebung ein.
 
 ### Windows (10/11)
-1. Lade die Datei `Start_Spiel.bat` aus diesem Repository herunter.
-2. Doppelklicke auf `Start_Spiel.bat`.
+1. Lade die Datei `Setup_Start.bat` aus diesem Repository herunter.
+2. Doppelklicke auf `Setup_Start.bat`.
 3. **Hinweis:** Falls Git oder Python (3.12.2) noch nicht auf deinem PC sind, installiert das Skript diese. Falls du dazu aufgefordert wirst, schließe das Konsolenfenster nach der Installation und starte die `.bat` Datei einfach **ein zweites Mal**.
 4. Das Skript klont das Repository, erstellt eine virtuelle Umgebung und installiert automatisch Arcade (3.3.2) und Pyglet (2.0.17).
 
 ### macOS & Linux
-1. Lade die Datei `start_spiel.sh` herunter.
+1. Lade die Datei `Setup_Start.sh` herunter.
 2. Öffne ein Terminal im entsprechenden Ordner.
 3. Mache das Skript ausführbar:
-   ```bash
-   chmod +x start_spiel.sh
-
 ```
-
-4. Starte das Skript:
-```bash
-./start_spiel.sh
-
+chmod +x Setup_Start.sh
+```
+5. Starte das Skript(bash):
+```
+./Setup_Start.sh
 ```
 
 
@@ -85,4 +82,4 @@ Code & Design by: **SampleCraft (Leo Göttlinger)**
 
 Projekt-Repository: [https://github.com/LeoGoettlinger/Prank-Jump-and-Run.git](https://github.com/LeoGoettlinger/Prank-Jump-and-Run.git)
 
-```
+---
