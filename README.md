@@ -1,29 +1,31 @@
 # 🎮 It's a Prank Jump & Run
 
-Ein dynamisches und unterhaltsames Jump & Run Spiel, entwickelt mit Python und der Arcade-Bibliothek. Navigiere deine Spielfigur durch herausfordernde Level, weiche Hindernissen aus und erlebe die "Prank"-Features!
+Ein actionreiches 2D Jump & Run Spiel, entwickelt mit Python und der Arcade-Bibliothek. Sammle Münzen, finde Schlüssel für neue Level, nutze magische Tränke und weiche den tödlichen Stacheln aus!
 
 ## 🚀 Features
 
-- **Intelligente Engine:** Nutzt Python 3.12.2 und Arcade 3.3.2 für flüssiges Gameplay.
-- **Einzigartige Spielmechaniken:**
-    - **Ghost Rooms:** Nachrichten und Elemente verschwinden nach einer festgelegten Zeit.
-    - **Privacy Mode:** Erstelle Chats oder Aktionen im Inkognito-Modus.
-    - **Dead Man's Switch:** Ein Sicherheits-Feature für deine "virtuellen Identitäten".
-    - **Ghost Switch:** Ein spezieller Schalter für die Chat-Interaktion.
-- **Virtuelle Identitäten:** Setze Namen, User-Tags, Beschreibungen und Avatare für deine Schatten-Identitäten.
-- **Media Transcoding:** Automatische Optimierung von Bildern und Videos im Hintergrund.
+- **Interaktives Terminal-Setup:** Bevor das eigentliche Spiel startet, kannst du in der Konsole Parameter wie Start-Leben, Zeitlimits und Unverwundbarkeits-Dauer anpassen.
+- **Power-Ups & Tränke:** - Multi-Jump-Tränke (erlaubt Doppelsprünge für eine bestimmte Zeit)
+  - Jump-Boost-Tränke (höhere Sprungkraft)
+  - Lebens-Tränke (+1 oder +2 Herzen)
+- **Rätsel & Entdeckungen:**
+  - Sammle Schlüssel, um Tore zu öffnen und in neue Level (bis Level 3) vorzudringen.
+  - Finde den geheimen Schlüssel für den Schatz-Raum!
+  - Nutze Teleporter und Röhren, um über die Map zu reisen.
+- **Gefahren:** Weiche Stacheln aus. Wirst du getroffen, verlierst du ein Leben, erhältst aber kurzzeitig Schaden-Immunität.
+- **Dynamische Musik:** Die Hintergrundmusik ändert sich, sobald du Level 3 erreichst (Epic Music!).
 
 ---
 
 ## 🛠 Installation & Setup
 
-Dieses Projekt ist so konzipiert, dass es sich auf einem "frischen" System fast vollständig von selbst installiert. Die mitgelieferten Skripte prüfen, ob **Git** und **Python** vorhanden sind und installieren diese bei Bedarf automatisch.
+Dieses Projekt installiert alle nötigen Abhängigkeiten fast von selbst. Die Skripte prüfen, ob **Git** und **Python** vorhanden sind und richten eine isolierte Spielumgebung ein.
 
 ### Windows (10/11)
 1. Lade die Datei `Start_Spiel.bat` aus diesem Repository herunter.
 2. Doppelklicke auf `Start_Spiel.bat`.
-3. **Hinweis:** Falls Git oder Python noch nicht auf deinem PC sind, installiert das Skript diese im Hintergrund. Falls du dazu aufgefordert wirst, schließe das Fenster nach der Installation und starte die `.bat` Datei einfach **ein zweites Mal**.
-4. Das Skript klont das Repository, erstellt eine virtuelle Umgebung und installiert alle Abhängigkeiten (Arcade 3.3.2, Pyglet 2.0.17).
+3. **Hinweis:** Falls Git oder Python (3.12.2) noch nicht auf deinem PC sind, installiert das Skript diese. Falls du dazu aufgefordert wirst, schließe das Konsolenfenster nach der Installation und starte die `.bat` Datei einfach **ein zweites Mal**.
+4. Das Skript klont das Repository, erstellt eine virtuelle Umgebung und installiert automatisch Arcade (3.3.2) und Pyglet (2.0.17).
 
 ### macOS & Linux
 1. Lade die Datei `start_spiel.sh` herunter.
@@ -41,57 +43,46 @@ Dieses Projekt ist so konzipiert, dass es sich auf einem "frischen" System fast 
 ```
 
 
-5. Das Skript installiert fehlende Pakete (via Homebrew auf Mac oder APT auf Linux) und startet das Spiel.
+5. Fehlende Pakete werden automatisch via Homebrew (Mac) oder APT (Linux) installiert und das Spiel startet anschließend.
 
 ---
 
 ## 🎮 Steuerung
 
-* **Bewegen:** Pfeiltasten oder `W`, `A`, `S`, `D`.
-* **Springen:** `Leertaste` oder `Pfeil oben`.
-* **Reset:** Drücke `R`, wenn du gewonnen oder verloren hast, um das Level neu zu starten.
-* **Interaktion:** Nutze die speziellen In-Game-Schalter für den **Ghost Mode** oder den **Dead Man's Switch**.
+* **Bewegen:** Pfeiltasten `Links`/`Rechts` oder `A` / `D`
+* **Springen:** `Leertaste`, `Pfeiltaste Oben` oder `W`
+* **Spiel beenden (Quit):** `Q`
+* **Spiel neu starten (Reset):** `R` (Nützlich, wenn du gewonnen oder verloren hast)
+* **Musik an/ausschalten:** `M`
 
 ---
 
 ## 📦 Systemvoraussetzungen (Automatisch verwaltet)
 
-Das Spiel benötigt und installiert lokal folgende Versionen:
+Das Spiel benötigt folgende Versionen, welche durch die Start-Skripte automatisch lokal eingerichtet werden:
 
 * **Python:** 3.12.2
 * **Arcade:** 3.3.2
 * **Pyglet:** 2.0.17
-* **Git:** Zum Abrufen der neuesten Spiel-Updates.
 
 ---
 
 ## 🐛 Bugs & Feedback
 
-Hast du einen Fehler gefunden oder hast du eine coole Idee für ein neues "Prank"-Feature? Wir freuen uns über jeden Beitrag!
+Hast du einen Fehler gefunden oder eine coole Idee für ein neues Level, neue Hindernisse oder Tränke?
 
-* **Bug melden:** Falls das Spiel abstürzt oder etwas nicht funktioniert, erstelle bitte ein "Issue" auf unserer GitHub-Seite.
-* **Verbesserungen:** Du hast Empfehlungen für das Gameplay oder das UI? Schreib es uns ebenfalls in die Issues!
+* **Bug melden:** Falls das Spiel abstürzt oder eine Kollision nicht funktioniert, erstelle bitte ein "Issue".
+* **Empfehlungen:** Du hast Ideen für das Gameplay? Schreib es uns ebenfalls in die Issues!
 
-👉 [Hier Bugs melden oder Feedback geben](https://www.google.com/search?q=https://github.com/LeoGoettlinger/Prank-Jump-and-Run/issues)
+👉 [Hier Bugs melden oder Empfehlungen abgeben](https://github.com/LeoGoettlinger/Prank-Jump-and-Run/issues)
 
 ---
 
 ## 👨‍💻 Entwickler
 
-Erstellt von **Leo Göttlinger**.
-Projekt-Repository: [https://github.com/LeoGoettlinger/Prank-Jump-and-Run.git](https://www.google.com/search?q=https://github.com/LeoGoettlinger/Prank-Jump-and-Run.git)
+Code & Design by: **SampleCraft (Leo Göttlinger)**
+© 2025-2026 Leo Göttlinger
 
----
-
-*Viel Spaß beim Spielen! Pass auf, dass du nicht geprankt wirst!* 🃏
-
-```
-
-***
-
-### Tipps zum Hinzufügen:
-1. **GitHub Issues:** Da du nach der Bug-Report-Seite gefragt hast, habe ich den Link direkt unter der Sektion "Bugs & Feedback" eingefügt.
-2. **Icons:** Ich habe ein paar Emojis hinzugefügt, damit das README auf GitHub moderner und einladender aussieht.
-3. **Pflege:** Wenn du neue Features einbaust (z.B. neue Tastenbelegungen), vergiss nicht, sie kurz in der Sektion "Steuerung" zu ergänzen!
+Projekt-Repository: [https://github.com/LeoGoettlinger/Prank-Jump-and-Run.git](https://github.com/LeoGoettlinger/Prank-Jump-and-Run.git)
 
 ```
