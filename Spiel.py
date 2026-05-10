@@ -299,7 +299,7 @@ class Plattformer(arcade.Window):
 #                else:
 #                    self.koordinaten_anzeigen = False
             elif symbol == arcade.key.M:
-                if self.hintergrundmusik_sound.playing == True:
+                if self.hintergrundmusik_sound and self.hintergrundmusik_sound.playing:
                     arcade.stop_sound(self.hintergrundmusik_sound)
                 else:
                     self.hintergrundmusik_sound = arcade.play_sound(self.hintergrundmusik, loop=True)
@@ -367,22 +367,23 @@ class Plattformer(arcade.Window):
 
         #ifn arcade.check_for_collision_with_list(self.spielfigur, self.):
         if self.tränke == True:
-            if arcade.check_for_collision_with_list(self.spielfigur, self.tränke_plus_ein_herz_spritelist):
-                for trank in arcade.check_for_collision_with_list(self.spielfigur, self.tränke_plus_ein_herz_spritelist): # Iterate over a copy or kill outside loop
-                    self.lives += 1
-                    self.plus1herz_timer = 3
+            hit_list = arcade.check_for_collision_with_list(self.spielfigur, self.tränke_plus_ein_herz_spritelist)
+            for trank in hit_list:
+                self.lives += 1
+                self.plus1herz_timer = 3
                 trank.kill()
             
-            if arcade.check_for_collision_with_list(self.spielfigur, self.tränke_plus_zwei_herzen_spritelist):
-                for trank in arcade.check_for_collision_with_list(self.spielfigur, self.tränke_plus_zwei_herzen_spritelist):
-                    self.lives += 2
-                    self.plus2herzen_timer = 3
+            hit_list = arcade.check_for_collision_with_list(self.spielfigur, self.tränke_plus_zwei_herzen_spritelist)
+            for trank in hit_list:
+                self.lives += 2
+                self.plus2herzen_timer = 3
                 trank.kill()
 
         if arcade.check_for_collision_with_list(self.spielfigur, self.schatz_liste):
-            for schatz in arcade.check_for_collision_with_list(self.spielfigur, self.schatz_liste):
+            hit_list = arcade.check_for_collision_with_list(self.spielfigur, self.schatz_liste)
+            for schatz in hit_list:
                 self.schätze += 1 # This should be outside the loop if only one treasure is picked up at a time
-            schatz.kill()
+                schatz.kill()
 
         if arcade.check_for_collision_with_list(self.spielfigur, self.key_schatzraum):
 #            for key in arcade.check_for_collision_with_list(self.spielfigur, self.key_schatzraum):
@@ -408,19 +409,19 @@ class Plattformer(arcade.Window):
             self.level_3 = True
 
         if self.tränke == True:
-            if arcade.check_for_collision_with_list(self.spielfigur, self.tränke_multi_jump_spritelist): # Iterate over a copy or kill outside loop
-                for trank in arcade.check_for_collision_with_list(self.spielfigur, self.tränke_multi_jump_spritelist):
-                    self.zeit_multi_jump = 5.5
-                    self.multi_jump = True
-                    self.physik_engine.enable_multi_jump(allowed_jumps=2)
+            hit_list = arcade.check_for_collision_with_list(self.spielfigur, self.tränke_multi_jump_spritelist)
+            for trank in hit_list:
+                self.zeit_multi_jump = 5.5
+                self.multi_jump = True
+                self.physik_engine.enable_multi_jump(allowed_jumps=2)
                 trank.kill()
             
-            if arcade.check_for_collision_with_list(self.spielfigur, self.tränke_jump_boost_spritelist):
-                for trank in arcade.check_for_collision_with_list(self.spielfigur, self.tränke_jump_boost_spritelist): # Iterate over a copy or kill outside loop
-                    self.zeit_jump_boost = 13
-                    self.höher_springen = True
-                    self.physik_engine.gravity_constant = 0.12
-                    trank.kill()
+            hit_list = arcade.check_for_collision_with_list(self.spielfigur, self.tränke_jump_boost_spritelist)
+            for trank in hit_list:
+                self.zeit_jump_boost = 13
+                self.höher_springen = True
+                self.physik_engine.gravity_constant = 0.12
+                trank.kill()
 
         if arcade.check_for_collision_with_list(self.spielfigur, self.szene.get_sprite_list("Ziel")):
             self.gewonnen = True
@@ -457,7 +458,8 @@ class Plattformer(arcade.Window):
             self.szene.get_sprite_list("Schlüssel 1").clear()
 
         if arcade.check_for_collision_with_list(self.spielfigur, self.münzen_spritelist):
-            for münze in arcade.check_for_collision_with_list(self.spielfigur, self.münzen_spritelist):
+            hit_list = arcade.check_for_collision_with_list(self.spielfigur, self.münzen_spritelist)
+            for münze in hit_list:
                 self.münzen += 1 # This should be outside the loop if only one coin is picked up at a time
                 münze.kill()
         
@@ -479,13 +481,11 @@ class Plattformer(arcade.Window):
             self.verloren = True
             #self.__init__()
 
-        if self.level_3 == True:
-            if self.hintergrundmusik.is_playing():
-                arcade.stop_sound(self.hintergrundmusik)
-                self.epic_music.play()
-
-            else:
-                self.epic_music.play()
+        if self.level_3:
+            if self.hintergrundmusik_sound and self.hintergrundmusik_sound.playing:
+                arcade.stop_sound(self.hintergrundmusik_sound)
+            if not self.epic_music_sound or not self.epic_music_sound.playing:
+                self.epic_music_sound = arcade.play_sound(self.epic_music, loop=True)
 
 
         if self.verloren and not self.verloren_sound_gespielt:
@@ -585,7 +585,7 @@ class Plattformer(arcade.Window):
             self.interact = False
 #                arcade.play_sound(self.audio_shutdown)
             arcade.stop_sound(self.hintergrundmusik_sound)
-            arcade.draw_lrbt_rectangle_filled(cam_x, cam_x , cam_y , cam_y, arcade.color.GREEN)
+            arcade.draw_lrbt_rectangle_filled(cam_x - 400, cam_x + 400, cam_y - 300, cam_y + 300, arcade.color.GREEN)
             arcade.draw_text("GEWONNEN", cam_x + 3, cam_y + 3, arcade.color.WHITE, 50, font_name="Kenney Blocks", anchor_x="center",anchor_y="center")
             arcade.draw_text("Klicke R um das Spiel erneut zu starten", cam_x - 125, cam_y - 70, arcade.color.WHITE)
 
@@ -593,7 +593,7 @@ class Plattformer(arcade.Window):
             self.interact = False
             arcade.stop_sound(self.hintergrundmusik_sound)
             arcade.stop_sound(self.epic_music_sound)
-            arcade.draw_lrbt_rectangle_filled(cam_x, cam_x , cam_y , cam_y, arcade.color.RED)
+            arcade.draw_lrbt_rectangle_filled(cam_x - 400, cam_x + 400, cam_y - 300, cam_y + 300, arcade.color.RED)
             # arcade.draw_lrtb_rectangle_filled(0, self.camera, self.camera.position , 0, arcade.color.RED)
             arcade.draw_text("VERLOREN", cam_x + 3, cam_y + 3, arcade.color.WHITE, 50, font_name="Kenney Blocks", anchor_x="center",anchor_y="center")
             arcade.draw_text("Klicke R um das Spiel erneut zu starten", cam_x - 125, cam_y - 70, arcade.color.WHITE)
