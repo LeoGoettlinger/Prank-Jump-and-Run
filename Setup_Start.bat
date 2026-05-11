@@ -7,14 +7,9 @@ echo.
 :: 1. PRUEFEN UND INSTALLIEREN VON GIT
 git --version >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [INFO] Git ist nicht installiert. Starte automatischen Download via Winget...
+    echo [INFO] Git fehlt. Installiere...
     winget install --id Git.Git -e --silent --accept-package-agreements --accept-source-agreements
-    echo.
-    echo =================================================================
-    echo [WICHTIG] Git wurde installiert! 
-    echo Windows muss die Pfade aktualisieren. 
-    echo Bitte SCHLIESSE dieses Fenster und STARTE DIESE DATEI NEU!
-    echo =================================================================
+    echo [WICHTIG] Bitte dieses Fenster SCHLIESSEN und die Datei NEU STARTEN!
     pause
     exit
 )
@@ -22,45 +17,42 @@ if %errorlevel% neq 0 (
 :: 2. PRUEFEN UND INSTALLIEREN VON PYTHON 3.12
 python --version >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [INFO] Python ist nicht installiert. Starte automatischen Download via Winget...
+    echo [INFO] Python fehlt. Installiere...
     winget install --id Python.Python.3.12 -e --silent --accept-package-agreements --accept-source-agreements
-    echo.
-    echo =================================================================
-    echo [WICHTIG] Python wurde installiert! 
-    echo Windows muss die Pfade aktualisieren. 
-    echo Bitte SCHLIESSE dieses Fenster und STARTE DIESE DATEI NEU!
-    echo =================================================================
+    echo [WICHTIG] Bitte dieses Fenster SCHLIESSEN und die Datei NEU STARTEN!
     pause
     exit
 )
 
 :: 3. REPOSITORY KLONEN
-echo [INFO] Git und Python sind bereit.
-if not exist "Prank-Jump-and-Run" (
-    echo [INFO] Lade Spiel-Dateien von GitHub herunter...
+if not exist "Prank-Jump-and-Run\.git" (
+    echo [INFO] Klone Repository neu...
+    rmdir /s /q "Prank-Jump-and-Run" 2>nul
     git clone -b main https://github.com/LeoGoettlinger/Prank-Jump-and-Run.git
 ) else (
-    echo [INFO] Spiel-Dateien existieren bereits. Suche nach Updates...
+    echo [INFO] Suche nach Updates...
     cd Prank-Jump-and-Run
     git pull origin main
     cd ..
 )
 
-:: 4. VIRTUELLE UMGEBUNG & SPIEL-ABHÄNGIGKEITEN INSTALLIEREN
-echo [INFO] Richte geschuetzte Python-Umgebung ein...
+:: 4. VIRTUELLE UMGEBUNG & INSTALLATION
 cd Prank-Jump-and-Run
 python -m venv venv
 call venv\Scripts\activate
 
-echo [INFO] Installiere Arcade und Pyglet...
-python -m pip install --upgrade pip --quiet
-pip install arcade==3.3.2 pyglet==2.0.17 --quiet
+echo [INFO] Update Pip...
+python -m pip install --upgrade pip
 
-:: 5. SPIEL STARTEN
+echo [INFO] Installiere Bibliotheken (Flexible Versionen)...
+:: Wir nutzen >= für bessere Kompatibilität
+python -m pip install "arcade>=3.0.0"
+python -m pip install "pyglet>=2.0.0"
+
+:: 5. START
 echo.
 echo =========================================================
-echo Alles erfolgreich geladen! Das Spiel startet jetzt...
+echo Startvorgang läuft...
 echo =========================================================
 python Spiel.py
-
 pause
