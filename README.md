@@ -14,6 +14,8 @@ Ein actionreiches 2D Jump & Run Spiel, entwickelt mit Python und der Arcade-Bibl
   - Nutze Teleporter und Röhren, um über die Map zu reisen.
 - **Gefahren:** Weiche Stacheln aus. Wirst du getroffen, verlierst du ein Leben, erhältst aber kurzzeitig Schaden-Immunität.
 - **Dynamische Musik:** Die Hintergrundmusik ändert sich, sobald du Level 3 erreichst (Epic Music!).
+- **Settings:** Diese werden bei jedem Start/Restart aufegerufen. Dort kannst du viele Einstellungen machen!
+- **Verbleibende Zeit:** Challenge deine Freunde: Wer schaft es schneller durchzuspielen?
 
 ---
 
