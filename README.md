@@ -85,3 +85,197 @@ Code & Design by: **SampleCraft (Leo Göttlinger)**
 Projekt-Repository: [https://github.com/LeoGoettlinger/Prank-Jump-and-Run.git](https://github.com/LeoGoettlinger/Prank-Jump-and-Run.git)
 
 ---
+
+https://www.swisstransfer.com/d/ca752f69-7821-4db4-a6bd-c4f313bab005
+
+1. Projektübersicht
+Entwickle einen vollumfänglichen, modularen Multipurpose Discord Bot namens SC‑Systems Bot.  
+Der Bot muss alle Features aus sämtlichen angehängten Quellcodes übernehmen und in ein einheitliches, modulares System integrieren.
+
+Branding:
+- Name: SC‑Systems Bot  
+- Beschreibung: Ultimate Purpose Discord Bot! Made by SampleCraft!  
+- Profilbild: (angehängt)  
+- Banner: (angehängt)
+
+Der Bot muss automatisch sicherstellen, dass:
+- Name  
+- Nickname  
+- Avatar  
+- Banner  
+- Aktivitätsstatus  
+niemals dauerhaft verändert werden können.  
+Änderungen werden sofort zurückgesetzt.
+
+---
+
+2. Aktivitätsrotation (nur Owner editierbar)
+Der Bot zeigt eine rotierende Aktivität, die:
+- alle 3 Sekunden wechselt  
+- alle aktivierten Features durchläuft  
+
+Wichtig:  
+- Nur der Bot‑Owner darf Aktivitäten bearbeiten  
+- Änderungen erfolgen ausschließlich über eine Datei (activities.yml)  
+- Keine Commands für Aktivitäten  
+
+---
+
+3. Modulares System mit eigener YML pro Modul
+Jedes Modul erhält eine eigene Datei:
+Zum Beispiel:
+
+modules/
+  moderation.yml
+  economy.yml
+  tickets.yml
+  leveling.yml
+  music.yml
+  ...
+
+
+Anforderungen:
+- Module können:
+  - global aktiviert/deaktiviert werden  
+  - pro Server aktiviert/deaktiviert werden  
+  - per Datei oder per Command (nur auf Admin‑Discord) gesteuert werden  
+- Module laden dynamisch  
+- Hot‑Reload ohne Neustart  
+- Module dürfen sich nicht gegenseitig blockieren  
+
+---
+
+4. Server‑spezifische Modul‑Konfiguration
+Jeder Discord‑Server erhält eine eigene Datei:
+
+
+servers/<serverID>/config.yml
+
+
+Diese Datei enthält:
+- Server‑Einstellungen  
+- Aktivierungsstatus  
+- Key‑Informationen  
+- Einen Abschnitt für jedes Modul, zum Beispiel:
+
+`yaml
+modules:
+  moderation:
+    enabled: true
+    config:
+      warn_limit: 3
+      mute_duration: "10m"
+
+  tickets:
+    enabled: false
+    config:
+      category: "Support"
+`
+
+Steuerung:
+- Per Command (nur auf Admin‑Discord)  
+- Per Datei (direkt editierbar)  
+
+---
+
+5. Multi‑Server Aktivierungssystem (Key‑System)
+Der Bot darf nicht automatisch auf jedem Server aktiv sein.  
+Stattdessen gibt es ein Key‑basiertes Aktivierungssystem.
+
+5.1 Key‑Generierung (nur Admin‑Discord)
+Ein Admin kann Keys generieren mit:
+- Anzahl erlaubter Server  
+- Ablaufzeit  
+- Beschreibung  
+- Manuelle Deaktivierung  
+
+5.2 Key‑Einlösung
+- Server‑Admin gibt Key per Command ein  
+- Bot aktiviert sich  
+- Aktivierung wird gespeichert in:
+  - keys.yml  
+  - servers/<id>/config.yml  
+
+5.3 Richtlinien‑Check
+Der Bot muss automatisch prüfen, ob das Key‑System Discord‑konform ist.
+
+Er prüft:
+- Discord Developer Terms  
+- Discord ToS  
+- Bot Verification Rules  
+- Monetarisierungsrichtlinien  
+
+Wenn ein Key‑System‑Vorgang gegen Richtlinien verstößt:
+- Aktivierung wird verweigert  
+- Warnung wird ausgegeben  
+- Log‑Eintrag wird erstellt  
+
+---
+
+6. Global Broadcast System
+Der Bot kann:
+- Nachrichten an alle aktivierten Server senden  
+- in den Setup‑Channel  
+- optional zeitgesteuert  
+- nur steuerbar vom Admin‑Discord  
+
+---
+
+7. Setup & Installation
+Der Bot wird als ZIP‑Archiv ausgeliefert mit:
+- vollständigem Bot‑Code  
+- allen Modulen  
+- allen Ressourcen  
+- Setup‑Dateien für:
+  - Windows → .bat  
+  - Linux → .sh  
+  - macOS → .sh  
+
+Setup‑Dateien müssen:
+- alle Abhängigkeiten installieren  
+- Umgebungsvariablen setzen  
+- Startskripte erstellen  
+- Logs konfigurieren  
+- optional Autostart aktivieren  
+
+---
+
+8. Feature‑Import
+Übernehme alle Features aus allen angehängten Bots, sofern Discord‑konform.
+
+Bei redundanten Features:
+- beste Version wählen  
+- vereinheitlichen  
+- modular integrieren  
+
+---
+
+9. Konfigurationssystem
+Der Bot benötigt folgende Dateien:
+
+Global:
+- config.yml  
+- modules.yml (globale Modulverwaltung)  
+- keys.yml  
+- activities.yml (nur Owner editierbar)  
+
+Pro Modul:
+- modules/<modulname>.yml
+
+Pro Server:
+- servers/<id>/config.yml  
+  - inkl. Modul‑Abschnitten  
+  - inkl. Key‑Status  
+  - inkl. Server‑Konfiguration  
+
+Alles muss:
+- live reloadbar  
+- logisch strukturiert  
+- kommentiert  
+- sicher  
+sein.
+
+---
+
+10. Rückfragen
+Falls Informationen fehlen, stelle bitte gezielte Rückfragen, bevor du mit der Generierung beginnst.
