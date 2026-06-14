@@ -47,6 +47,14 @@ class Plattformer(arcade.Window):
         self.epic_music_sound = arcade.play_sound(self.epic_music, loop=True)
         arcade.stop_sound(self.epic_music_sound)
 
+        self.advancement_sound = arcade.load_sound("achievement.mp3")
+        self.advancement_player = arcade.play_sound(self.advancement_sound)
+        arcade.stop_sound(self.advancement_player)
+
+        self.coin_sound = arcade.load_sound("coin_collect.mp3")
+        self.coin_player = arcade.play_sound(self.coin_sound)
+        arcade.stop_sound(self.coin_player)
+
         self.level_1 = False
         self.level_2 = False
         self.level_3 = False
@@ -90,6 +98,8 @@ class Plattformer(arcade.Window):
         self.plus2herzen_timer = -1
 
         self.schaden_immun = False
+
+        self.reset = False
 
         self.schaden_immun_timer = 0
         
@@ -150,6 +160,8 @@ class Plattformer(arcade.Window):
         self.genutzte_zeit_show = True
 
         self.tränke = True
+
+        self.verbleibende_zeit_start = False
 
         self.setup()
 
@@ -245,6 +257,7 @@ class Plattformer(arcade.Window):
             self.zeit_multi_jump = 0.0
             self.zeit_jump_boost = 0.0
             self.genutzte_zeit = 0.0
+            self.verbleibende_zeit_start = self.verbleibende_zeit # Store initial value for resetting later
 
         else:
             print("Schade! Ohne Zustimmung kein Spiel.")
@@ -256,7 +269,7 @@ class Plattformer(arcade.Window):
         if symbol == arcade.key.Q:
             arcade.exit()
         elif symbol == arcade.key.R:
-            self.__init__()
+            self.reset = True
         elif self.interact == True:
 #            if self.start_menu:
 #                if symbol == arcade.key.KEY_1:
@@ -429,7 +442,7 @@ class Plattformer(arcade.Window):
         if self.verloren == False:
             self.schaden_immun_timer -= delta_time 
             self.genutzte_zeit += delta_time
-            if self.verbleibende_zeit_use:
+            if self.verbleibende_zeit_use & self.verbleibende_zeit_start == True:
                 self.verbleibende_zeit -= delta_time
         
         if self.schaden_immun_timer <= 0:
@@ -462,6 +475,7 @@ class Plattformer(arcade.Window):
             for münze in hit_list:
                 self.münzen += 1 # This should be outside the loop if only one coin is picked up at a time
                 münze.kill()
+                self.coin_player = arcade.play_sound(self.coin_sound)
         
         if self.schaden_immun == False:
             if arcade.check_for_collision_with_list(self.spielfigur, self.szene.get_sprite_list("Stachel")):
@@ -469,6 +483,23 @@ class Plattformer(arcade.Window):
                 self.schaden_immun = True
                 self.schaden_immun_timer = 3
                 self.schaden_immun_anzeigen = True
+        
+        if self.reset == True:
+            if self.hintergrundmusik_sound and self.hintergrundmusik_sound.playing:
+                arcade.stop_sound(self.hintergrundmusik_sound)
+                arcade.play_sound(self.audio_shutdown)
+                self.interact = False
+                self.__init__()
+            elif self.epic_music_sound and self.epic_music_sound.playing:
+                arcade.stop_sound(self.epic_music_sound)
+                arcade.play_sound(self.audio_shutdown)
+                self.interact = False
+                self.__init__()
+            elif self.verloren_sound_player and self.verloren_sound_player.playing:
+                arcade.stop_sound(self.verloren_sound_player)
+                arcade.play_sound(self.audio_shutdown)
+                self.interact = False
+                self.__init__()
 
         if arcade.check_for_collision_with_list(self.spielfigur, self.szene.get_sprite_list("Reader 1")) and self.schlüssel_level1 == True:
             print("Ich mag Züge!!")
@@ -570,9 +601,9 @@ class Plattformer(arcade.Window):
             arcade.draw_text(f"+2 Herzen", cam_x + 45, cam_y  - 210,  font_size=18, font_name="Kenney", anchor_x="right")
         
         if self.verbleibende_zeit_show == True:
-            arcade.draw_text(f"Verbleibende Zeit: {round(self.verbleibende_zeit, 1)} Sekunden", cam_x + 385, cam_y  - 265,  font_size=18, font_name="Kenney", anchor_x="right")
+            arcade.draw_text(f"Verbleibende Zeit: {round(self.verbleibende_zeit, 1)} Sekunden", cam_x + 385, cam_y  + 265,  font_size=18, font_name="Kenney", anchor_x="right")
         if self.genutzte_zeit_show == True:
-            arcade.draw_text(f"Genutzte Zeit: {round(self.genutzte_zeit, 1)} Sekunden", cam_x + 385, cam_y  - 245,  font_size=18, font_name="Kenney", anchor_x="right")
+            arcade.draw_text(f"Genutzte Zeit: {round(self.genutzte_zeit, 1)} Sekunden", cam_x + 385, cam_y  + 245,  font_size=18, font_name="Kenney", anchor_x="right")
 
     #  arcade.draw_text(f"Münzen: {round(self.münzen, 1)}", 780, 20,  font_size=18, font_name="Kenney", anchor_x="right")
 
