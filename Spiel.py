@@ -41,31 +41,31 @@ class Plattformer(arcade.Window):
         self.nebenrisiken_sound = None
 
         self.hintergrundmusik = arcade.load_sound("hintergrundmusik.wav")
-        self.hintergrundmusik_sound = arcade.play_sound(self.hintergrundmusik, loop=True)
+        self.hintergrundmusik_sound = None # arcade.play_sound(self.hintergrundmusik, loop=True)
 
         self.epic_music = arcade.load_sound("epic_music.mp3")
-        self.epic_music_sound = arcade.play_sound(self.epic_music, loop=True)
-        arcade.stop_sound(self.epic_music_sound)
+        self.epic_music_sound = None # arcade.play_sound(self.epic_music, loop=True)
+        # arcade.stop_sound(self.epic_music_sound)
 
         self.advancement_sound = arcade.load_sound("achievement.mp3")
-        self.advancement_player = arcade.play_sound(self.advancement_sound)
-        arcade.stop_sound(self.advancement_player)
+        self.advancement_player = None# arcade.play_sound(self.advancement_sound)
+        # arcade.stop_sound(self.advancement_player)
 
         self.coin_sound = arcade.load_sound("coin_collect.mp3")
-        self.coin_player = arcade.play_sound(self.coin_sound)
-        arcade.stop_sound(self.coin_player)
+        self.coin_player = None # arcade.play_sound(self.coin_sound)
+        # arcade.stop_sound(self.coin_player)
 
         self.trank_sound = arcade.load_sound("trank.mp3")
-        self.trank_player = arcade.play_sound(self.trank_sound)
-        arcade.stop_sound(self.trank_player)
+        self.trank_player = None # arcade.play_sound(self.trank_sound)
+        # arcade.stop_sound(self.trank_player)
 
         self.item_sound = arcade.load_sound("item-collect.mp3")
-        self.item_player = arcade.play_sound(self.item_sound)
-        arcade.stop_sound(self.item_player)
+        self.item_player = None # arcade.play_sound(self.item_sound)
+        # arcade.stop_sound(self.item_player)
 
         self.damage_sound = arcade.load_sound("damage.mp3")
-        self.damage_player = arcade.play_sound(self.damage_sound)
-        arcade.stop_sound(self.damage_player)
+        self.damage_player = None # arcade.play_sound(self.damage_sound)
+        # arcade.stop_sound(self.damage_player)
 
         self.level_1 = False
         self.level_2 = False
@@ -177,6 +177,8 @@ class Plattformer(arcade.Window):
 
         self.setup()
 
+        self.gewonnen_sound_gespielt = False
+
 #        self.ich_habe_keine_ahnung = print("Ich habe keine Ahnung!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 #        print("Ich mag Züge!!!!!!!!(Wenn diese Nachricht angezeigt wird dann ist __init__ durchgelaufen)")
 
@@ -262,6 +264,8 @@ class Plattformer(arcade.Window):
             self.schaden_immun_timer_initial = get_numeric_input("Zeit der Schaden-Immunität nach einem Treffer eingeben (in Sekunden)", 3.0)
             self.schaden_immun_timer = self.schaden_immun_timer_initial
             self.genutzte_zeit_show = get_boolean_input("Genutzte Zeit anzeigen?", True)
+
+            self.hintergrundmusik_sound = arcade.play_sound(self.hintergrundmusik, loop=True)
 
             # Ensure other timers are floats for arithmetic operations
             self.plus1herz_timer = -1.0
@@ -393,25 +397,25 @@ class Plattformer(arcade.Window):
         #ifn arcade.check_for_collision_with_list(self.spielfigur, self.):
         if self.tränke == True:
             hit_list = arcade.check_for_collision_with_list(self.spielfigur, self.tränke_plus_ein_herz_spritelist)
-            self.trank_player = arcade.play_sound(self.trank_sound)
             for trank in hit_list:
                 self.lives += 1
                 self.plus1herz_timer = 3
                 trank.kill()
+                self.trank_player = arcade.play_sound(self.trank_sound)
             
             hit_list = arcade.check_for_collision_with_list(self.spielfigur, self.tränke_plus_zwei_herzen_spritelist)
-            self.trank_player = arcade.play_sound(self.trank_sound)
             for trank in hit_list:
                 self.lives += 2
                 self.plus2herzen_timer = 3
                 trank.kill()
+                self.trank_player = arcade.play_sound(self.trank_sound)
 
         if arcade.check_for_collision_with_list(self.spielfigur, self.schatz_liste):
             hit_list = arcade.check_for_collision_with_list(self.spielfigur, self.schatz_liste)
-            self.item_player = arcade.play_sound(self.item_sound)
             for schatz in hit_list:
                 self.schätze += 1 # This should be outside the loop if only one treasure is picked up at a time
                 schatz.kill()
+                self.item_player = arcade.play_sound(self.item_sound)
 
         if arcade.check_for_collision_with_list(self.spielfigur, self.key_schatzraum):
             self.advancement_player = arcade.play_sound(self.advancement_sound)
@@ -442,29 +446,32 @@ class Plattformer(arcade.Window):
 
         if self.tränke == True:
             hit_list = arcade.check_for_collision_with_list(self.spielfigur, self.tränke_multi_jump_spritelist)
-            self.trank_player = arcade.play_sound(self.trank_sound)
             for trank in hit_list:
                 self.zeit_multi_jump = 5.5
                 self.multi_jump = True
                 self.physik_engine.enable_multi_jump(allowed_jumps=2)
                 trank.kill()
+                self.trank_player = arcade.play_sound(self.trank_sound)
             
             hit_list = arcade.check_for_collision_with_list(self.spielfigur, self.tränke_jump_boost_spritelist)
-            self.trank_player = arcade.play_sound(self.trank_sound)
             for trank in hit_list:
                 self.zeit_jump_boost = 13
                 self.höher_springen = True
                 self.physik_engine.gravity_constant = 0.12
                 trank.kill()
+                self.trank_player = arcade.play_sound(self.trank_sound)
 
         if arcade.check_for_collision_with_list(self.spielfigur, self.szene.get_sprite_list("Ziel")):
+            if not self.gewonnen_sound_gespielt:
+                self.advancement_player = arcade.play_sound(self.advancement_sound)
+                self.gewonnen_sound_gespielt = True
             self.gewonnen = True
-            self.advancement_player = arcade.play_sound(self.advancement_sound)
 
         if self.verloren == False:
             self.schaden_immun_timer -= delta_time 
             self.genutzte_zeit += delta_time
-            if self.verbleibende_zeit_use & self.verbleibende_zeit_start == True:
+            # Use boolean logic (no bitwise &). verbleibende_zeit_start is a float timestamp here.
+            if self.verbleibende_zeit_use and self.verbleibende_zeit_start == True:
                 self.verbleibende_zeit -= delta_time
         
         if self.schaden_immun_timer <= 0:
