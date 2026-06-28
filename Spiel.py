@@ -185,26 +185,24 @@ class Plattformer(arcade.Window):
 #        print("Ich mag Züge!!!!!!!!(Wenn diese Nachricht angezeigt wird dann ist __init__ durchgelaufen)")
 
     def setup(self):
-
         line = "===================================================="
-    
         print(line)
         print("       IT'S A PRANK JUMP & RUN Beta 0.1 - Setup             ")
         print(line)
         print("Welcome to the Prank! Viel Spaß beim Hüpfen.")
         print(f"Code & Design by: SampleCraft (Leo Göttlinger)")
         print(line)
-        
-        # Kurz und knackig - das Wichtigste für den Spieler
+
+        # Steuerung
         print("STEUERUNG:")
         print("  Bewegung       : Pfeiltasten oder WASD")
         print("  Springen/Aktion: Leertaste")
         print("  Beenden (Quit) : Q")
         print("  Reset/Neustart : R")
-        print("  Musik an/aus    : M")
+        print("  Musik an/aus   : M")
         print(line)
 
-        # Rechtlicher Part: Kurz, aber deutlich
+        # Rechtliches
         print("RECHTLICHES & COPYRIGHT:")
         print("© 2025-2026 Leo Göttlinger (SampleCraft)")
         print("Der Code und alle Assets sind mein Eigentum.")
@@ -214,74 +212,107 @@ class Plattformer(arcade.Window):
         print("Ideen oder Bugs gerne auf GitHub melden: https://github.com/LeoGoettlinger/Prank-Jump-and-Run/issues")
         print(line)
 
-        # Die Abfrage
+        # Bedingungen
         check = input("Akzeptierst du die Bedingungen? (ja/nein): ").strip().lower()
-
-        if check == "ja":
-            print("Spiel wird geladen...")
-            print("Lade Map... Lade Sprites... Bereite Fallen vor...")
-            print("LOS GEHT'S!")
+        if check != "ja":
+            print("Schade! Ohne Zustimmung kein Spiel.")
+            print("Das Programm wird geschlossen.")
             print(line)
+            arcade.exit()
 
-            print("")
-            print(line)
-            print("SETTINGS:")
-            print(line)
-        
-            # Helper function to get boolean input
-            def get_boolean_input(prompt, default_value):
-                user_input = input(f"{prompt} (True oder False, Standard: {default_value}): ").strip().lower()
-                if user_input == "true":
-                    return True
-                elif user_input == "false":
-                    return False
-                print(f"Ungültige Eingabe oder leer. Verwende Standardwert: {default_value}")
-                return default_value
+        print("Spiel wird geladen...")
+        print("Lade Map... Lade Sprites... Bereite Fallen vor...")
+        print("LOS GEHT'S!")
+        print(line)
 
-            # Helper function to get numeric input
-            def get_numeric_input(prompt, default_value, type_converter=float):
-                user_input = input(f"{prompt} (Standard: {default_value}): ").strip()
-                if user_input:
-                    try:
-                        return type_converter(user_input)
-                    except ValueError:
-                        print(f"Ungültige Eingabe. Verwende Standardwert: {default_value}")
-                        return default_value
-                print(f"Leere Eingabe. Verwende Standardwert: {default_value}")
-                return default_value
+        # ----- Hilfsfunktionen (müssen vor der Verwendung definiert sein) -----
+        def get_boolean_input(prompt, default_value):
+            user_input = input(f"{prompt} (True oder False, Standard: {default_value}): ").strip().lower()
+            if user_input == "true":
+                return True
+            elif user_input == "false":
+                return False
+            print(f"Ungültige Eingabe oder leer. Verwende Standardwert: {default_value}")
+            return default_value
 
-            print("It´s a Prank Jump & Run Setup/Settings:")
-            
+        def get_numeric_input(prompt, default_value, type_converter=float):
+            user_input = input(f"{prompt} (Standard: {default_value}): ").strip()
+            if user_input:
+                try:
+                    return type_converter(user_input)
+                except ValueError:
+                    print(f"Ungültige Eingabe. Verwende Standardwert: {default_value}")
+                    return default_value
+            print(f"Leere Eingabe. Verwende Standardwert: {default_value}")
+            return default_value
+
+        print("")
+        print(line)
+        print("SETTINGS:")
+        print(line)
+
+        # ----- Preset-Auswahl -----
+        print("Wähle ein Schwierigkeits-Preset:")
+        print("  1 = Easy")
+        print("  2 = Normal")
+        print("  3 = Hardcore")
+        print("  4 = Custom (individuelle Einstellungen)")
+        preset = input("Deine Wahl (1-4): ").strip()
+
+        # Standardwerte (werden bei Custom ggf. überschrieben)
+        self.verbleibende_zeit_use = True
+        self.verbleibende_zeit = 300.0
+        self.verbleibende_zeit_show = True
+        self.tränke = True
+        self.lives = 4
+        self.schaden_immun_timer_initial = 3.0   # <-- immer definieren
+        self.genutzte_zeit_show = True
+
+        if preset == "1":          # Easy
+            self.lives = 6
+            self.verbleibende_zeit = 600.0
+            self.tränke = True
+            self.schaden_immun_timer_initial = 2.0
+            print("Preset 'Easy' geladen.")
+        elif preset == "2":        # Normal
+            print("Preset 'Normal' geladen.")
+        elif preset == "3":        # Hardcore
+            self.lives = 1
+            self.verbleibende_zeit = 120.0
+            self.tränke = False
+            self.schaden_immun_timer_initial = 0.0
+            print("Preset 'Hardcore' geladen.")
+        elif preset == "4":        # Custom
+            print("Custom-Modus – du wirst nun alle Einstellungen selbst festlegen.")
             self.verbleibende_zeit_use = get_boolean_input("Verbleibende Zeit verwenden?", True)
             if self.verbleibende_zeit_use:
                 self.verbleibende_zeit = get_numeric_input("Verbleibende Zeit eingeben (in Sekunden)", 300.0)
                 self.verbleibende_zeit_show = get_boolean_input("Verbleibende Zeit anzeigen?", True)
             else:
-                self.verbleibende_zeit = 300.0 # Reset to default if not used, or keep initial value
+                self.verbleibende_zeit = 300.0
                 self.verbleibende_zeit_show = False
 
             self.tränke = get_boolean_input("Tränke aktivieren?", True)
             self.lives = get_numeric_input("Anzahl Start-Leben eingeben", 4, int)
-            # Store the initial value for resetting later if needed, and set current timer
-            self.schaden_immun_timer_initial = get_numeric_input("Zeit der Schaden-Immunität nach einem Treffer eingeben (in Sekunden)", 3.0)
-            self.schaden_immun_timer = self.schaden_immun_timer_initial
+            self.schaden_immun_timer_initial = get_numeric_input("Zeit der Schaden-Immunität nach einem Treffer (in Sekunden)", 3.0)
             self.genutzte_zeit_show = get_boolean_input("Genutzte Zeit anzeigen?", True)
-
-            self.hintergrundmusik_sound = arcade.play_sound(self.hintergrundmusik, loop=True)
-
-            # Ensure other timers are floats for arithmetic operations
-            self.plus1herz_timer = -1.0
-            self.plus2herzen_timer = -1.0
-            self.zeit_multi_jump = 0.0
-            self.zeit_jump_boost = 0.0
-            self.genutzte_zeit = 0.0
-            self.verbleibende_zeit_start = self.verbleibende_zeit # Store initial value for resetting later
-
         else:
-            print("Schade! Ohne Zustimmung kein Spiel.")
-            print("Das Programm wird geschlossen.")
-            print(line)
-            arcade.exit()
+            print("Ungültige Eingabe – es wird das Preset 'Normal' verwendet.")
+
+        # Timer initialisieren (einheitlich für alle Modi)
+        self.schaden_immun_timer = self.schaden_immun_timer_initial
+        self.plus1herz_timer = -1.0
+        self.plus2herzen_timer = -1.0
+        self.zeit_multi_jump = 0.0
+        self.zeit_jump_boost = 0.0
+        self.genutzte_zeit = 0.0
+        self.verbleibende_zeit_start = self.verbleibende_zeit
+
+        # Hintergrundmusik starten
+        self.hintergrundmusik_sound = arcade.play_sound(self.hintergrundmusik, loop=True)
+
+        print("\nFERTIG! Das Spiel startet jetzt.")
+        print(line)
 
     def on_key_press(self, symbol, modifiers):
         if symbol == arcade.key.Q:
