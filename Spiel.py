@@ -179,6 +179,8 @@ class Plattformer(arcade.Window):
 
         self.gewonnen_sound_gespielt = False
 
+        self.level3_music_switched = False
+
 #        self.ich_habe_keine_ahnung = print("Ich habe keine Ahnung!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 #        print("Ich mag Züge!!!!!!!!(Wenn diese Nachricht angezeigt wird dann ist __init__ durchgelaufen)")
 
@@ -544,12 +546,20 @@ class Plattformer(arcade.Window):
             #self.__init__()
 
         if self.level_3:
-            if self.hintergrundmusik_sound and self.hintergrundmusik_sound.playing:
-                arcade.stop_sound(self.hintergrundmusik_sound)
+            if self.level_3 and not self.level3_music_switched:
+                # Hintergrundmusik stoppen
+                if self.hintergrundmusik_sound and self.hintergrundmusik_sound.playing:
+                    arcade.stop_sound(self.hintergrundmusik_sound)
+                
+                # Epische Musik starten (falls noch nicht)
+                if not self.epic_music_sound or not self.epic_music_sound.playing:
+                    self.epic_music_sound = arcade.play_sound(self.epic_music, loop=True)
+                
+                # Achievement-Sound einmal abspielen
                 self.advancement_player = arcade.play_sound(self.advancement_sound)
-            if not self.epic_music_sound or not self.epic_music_sound.playing:
-                self.epic_music_sound = arcade.play_sound(self.epic_music, loop=True)
-                self.advancement_player = arcade.play_sound(self.advancement_sound)
+                
+                # Flag setzen, damit der Block nicht nochmal ausgeführt wird
+                self.level3_music_switched = True
 
 
         if self.verloren and not self.verloren_sound_gespielt:
