@@ -55,6 +55,18 @@ class Plattformer(arcade.Window):
         self.coin_player = arcade.play_sound(self.coin_sound)
         arcade.stop_sound(self.coin_player)
 
+        self.trank_sound = arcade.load_sound("trank.mp3")
+        self.trank_player = arcade.play_sound(self.trank_sound)
+        arcade.stop_sound(self.trank_player)
+
+        self.item_sound = arcade.load_sound("item-collect.mp3")
+        self.item_player = arcade.play_sound(self.item_sound)
+        arcade.stop_sound(self.item_player)
+
+        self.damage_sound = arcade.load_sound("damage.mp3")
+        self.damage_player = arcade.play_sound(self.damage_sound)
+        arcade.stop_sound(self.damage_player)
+
         self.level_1 = False
         self.level_2 = False
         self.level_3 = False
@@ -381,12 +393,14 @@ class Plattformer(arcade.Window):
         #ifn arcade.check_for_collision_with_list(self.spielfigur, self.):
         if self.tränke == True:
             hit_list = arcade.check_for_collision_with_list(self.spielfigur, self.tränke_plus_ein_herz_spritelist)
+            self.trank_player = arcade.play_sound(self.trank_sound)
             for trank in hit_list:
                 self.lives += 1
                 self.plus1herz_timer = 3
                 trank.kill()
             
             hit_list = arcade.check_for_collision_with_list(self.spielfigur, self.tränke_plus_zwei_herzen_spritelist)
+            self.trank_player = arcade.play_sound(self.trank_sound)
             for trank in hit_list:
                 self.lives += 2
                 self.plus2herzen_timer = 3
@@ -394,11 +408,13 @@ class Plattformer(arcade.Window):
 
         if arcade.check_for_collision_with_list(self.spielfigur, self.schatz_liste):
             hit_list = arcade.check_for_collision_with_list(self.spielfigur, self.schatz_liste)
+            self.item_player = arcade.play_sound(self.item_sound)
             for schatz in hit_list:
                 self.schätze += 1 # This should be outside the loop if only one treasure is picked up at a time
                 schatz.kill()
 
         if arcade.check_for_collision_with_list(self.spielfigur, self.key_schatzraum):
+            self.advancement_player = arcade.play_sound(self.advancement_sound)
 #            for key in arcade.check_for_collision_with_list(self.spielfigur, self.key_schatzraum):
             self.key_schatzraum_have = True
             self.szene.get_sprite_list("Schlüssel Schatz-Raum").clear()
@@ -408,21 +424,25 @@ class Plattformer(arcade.Window):
             self.walls = [self.szene.get_sprite_list("Tile Layer 1"), self.szene.get_sprite_list("Röhre"), self.szene.get_sprite_list("Unsichtbare Blöcke")]
             self.szene.get_sprite_list("Activate Schatz-Raum").clear()
             self.szene.get_sprite_list("Schatz-Raum Verschließ-Blöcke").clear()
+            self.advancement_player = arcade.play_sound(self.advancement_sound)
 
         if arcade.check_for_collision_with_list(self.spielfigur, self.key_level_2):
 #            for key in arcade.check_for_collision_with_list(self.spielfigur, self.key_level_2):
             self.key_level_2_have = True
             self.szene.get_sprite_list("Schlüssel 2").clear()
+            self.advancement_player = arcade.play_sound(self.advancement_sound)
             
         if arcade.check_for_collision_with_list(self.spielfigur, self.szene.get_sprite_list("Hebel Level 2")) and self.key_level_2_have == True:
 #            for tor3 in arcade.check_for_collision_with_list(self.spielfigur, self.tor2):
             self.walls = [self.szene.get_sprite_list("Tile Layer 1"), self.szene.get_sprite_list("Röhre"), self.szene.get_sprite_list("Unsichtbare Blöcke")]
             self.szene.get_sprite_list("Hebel Level 2").clear()
             self.szene.get_sprite_list("Tor 2").clear()
+            self.advancement_player = arcade.play_sound(self.advancement_sound)
             self.level_3 = True
 
         if self.tränke == True:
             hit_list = arcade.check_for_collision_with_list(self.spielfigur, self.tränke_multi_jump_spritelist)
+            self.trank_player = arcade.play_sound(self.trank_sound)
             for trank in hit_list:
                 self.zeit_multi_jump = 5.5
                 self.multi_jump = True
@@ -430,6 +450,7 @@ class Plattformer(arcade.Window):
                 trank.kill()
             
             hit_list = arcade.check_for_collision_with_list(self.spielfigur, self.tränke_jump_boost_spritelist)
+            self.trank_player = arcade.play_sound(self.trank_sound)
             for trank in hit_list:
                 self.zeit_jump_boost = 13
                 self.höher_springen = True
@@ -438,6 +459,7 @@ class Plattformer(arcade.Window):
 
         if arcade.check_for_collision_with_list(self.spielfigur, self.szene.get_sprite_list("Ziel")):
             self.gewonnen = True
+            self.advancement_player = arcade.play_sound(self.advancement_sound)
 
         if self.verloren == False:
             self.schaden_immun_timer -= delta_time 
@@ -479,6 +501,7 @@ class Plattformer(arcade.Window):
         
         if self.schaden_immun == False:
             if arcade.check_for_collision_with_list(self.spielfigur, self.szene.get_sprite_list("Stachel")):
+                self.damage_player = arcade.play_sound(self.damage_sound)
                 self.lives -= 1
                 self.schaden_immun = True
                 self.schaden_immun_timer = 3
@@ -507,6 +530,7 @@ class Plattformer(arcade.Window):
             self.walls = [self.szene.get_sprite_list("Tile Layer 1"), self.szene.get_sprite_list("Röhre"), self.szene.get_sprite_list("Unsichtbare Blöcke"), self.szene.get_sprite_list("Tor 2"), self.szene.get_sprite_list("Schatz-Raum Verschließ-Blöcke")]
             self.szene.get_sprite_list("Reader 1").clear()
             self.szene.get_sprite_list("Tor 1").clear()
+            self.advancement_player = arcade.play_sound(self.advancement_sound)
 
         if self.lives == 0:
             self.verloren = True
@@ -515,8 +539,10 @@ class Plattformer(arcade.Window):
         if self.level_3:
             if self.hintergrundmusik_sound and self.hintergrundmusik_sound.playing:
                 arcade.stop_sound(self.hintergrundmusik_sound)
+                self.advancement_player = arcade.play_sound(self.advancement_sound)
             if not self.epic_music_sound or not self.epic_music_sound.playing:
                 self.epic_music_sound = arcade.play_sound(self.epic_music, loop=True)
+                self.advancement_player = arcade.play_sound(self.advancement_sound)
 
 
         if self.verloren and not self.verloren_sound_gespielt:
