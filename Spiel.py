@@ -316,6 +316,8 @@ class Plattformer(arcade.Window):
 
         print("\nFERTIG! Das Spiel startet jetzt.")
         print(line)
+        print("Funfact: Marcus hat das Game auf Hardcore mit 1 Leben und 30 Sekunden noch übrig gewonnen. Schaffst du das auch? ;)")
+        print(line)
 
     def on_key_press(self, symbol, modifiers):
         if symbol == arcade.key.Q:
