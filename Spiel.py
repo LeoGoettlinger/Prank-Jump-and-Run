@@ -689,15 +689,18 @@ class Plattformer(arcade.Window):
         if self.gewonnen == True:
             self.interact = False
 #                arcade.play_sound(self.audio_shutdown)
-            arcade.stop_sound(self.hintergrundmusik_sound)
+            if self.hintergrundmusik_sound.is_playing():
+                arcade.stop_sound(self.hintergrundmusik_sound)
             arcade.draw_lrbt_rectangle_filled(cam_x - 400, cam_x + 400, cam_y - 300, cam_y + 300, arcade.color.GREEN)
             arcade.draw_text("GEWONNEN", cam_x + 3, cam_y + 3, arcade.color.WHITE, 50, font_name="Kenney Blocks", anchor_x="center",anchor_y="center")
             arcade.draw_text("Klicke R um das Spiel erneut zu starten", cam_x - 125, cam_y - 70, arcade.color.WHITE)
 
         if self.verloren == True:
             self.interact = False
-            arcade.stop_sound(self.hintergrundmusik_sound)
-            arcade.stop_sound(self.epic_music_sound)
+            if self.hintergrundmusik_sound.is_playing():
+                arcade.stop_sound(self.hintergrundmusik_sound)
+            if self.epic_music_sound.is_playing():
+                arcade.stop_sound(self.epic_music_sound)
             arcade.draw_lrbt_rectangle_filled(cam_x - 400, cam_x + 400, cam_y - 300, cam_y + 300, arcade.color.RED)
             # arcade.draw_lrtb_rectangle_filled(0, self.camera, self.camera.position , 0, arcade.color.RED)
             arcade.draw_text("VERLOREN", cam_x + 3, cam_y + 3, arcade.color.WHITE, 50, font_name="Kenney Blocks", anchor_x="center",anchor_y="center")
