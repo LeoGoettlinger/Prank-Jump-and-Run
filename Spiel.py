@@ -171,6 +171,8 @@ class Plattformer(arcade.Window):
 
         self.genutzte_zeit_show = True
 
+        self.verbleibende_zeit_start = False
+
         self.tränke = True
 
         self.setup()
@@ -257,46 +259,37 @@ class Plattformer(arcade.Window):
         print("  4 = Custom (individuelle Einstellungen)")
         preset = input("Deine Wahl (1-4): ").strip()
 
-        # Standardwerte (werden bei Custom ggf. überschrieben)
-        self.verbleibende_zeit_use = True
-        self.verbleibende_zeit = 300.0
-        self.verbleibende_zeit_show = True
-        self.tränke = True
-        self.lives = 4
-        self.schaden_immun_timer_initial = 3.0   # <-- immer definieren
-        self.genutzte_zeit_show = True
-
         if preset == "1":          # Easy
             self.lives = 6
             self.verbleibende_zeit = 600.0
             self.tränke = True
-            self.schaden_immun_timer_initial = 2.0
+            self.schaden_immun_timer = 2.0
             self.verbleibende_zeit_show = True
-            self.verbleibende_zeit_use = True
+            self.verbleibende_zeit_start = True
             self.genutzte_zeit_show = True
             print("Preset 'Easy' geladen.")
         elif preset == "2":        # Normal
             self.lives = 4
             self.verbleibende_zeit = 300.0
             self.tränke = True
-            self.schaden_immun_timer_initial = 3.0
+            self.schaden_immun_timer = 3.0
             self.verbleibende_zeit_show = True
-            self.verbleibende_zeit_use = True
+            self.verbleibende_zeit_start = True
             self.genutzte_zeit_show = True
             print("Preset 'Normal' geladen.")
         elif preset == "3":        # Hardcore
-            self.lives = 1
+            self.lives = 3
             self.verbleibende_zeit = 120.0
             self.tränke = False
-            self.schaden_immun_timer_initial = 0.0
+            self.schaden_immun_timer = 0.0
             self.verbleibende_zeit_show = True
-            self.verbleibende_zeit_use = True
+            self.verbleibende_zeit_start = True
             self.genutzte_zeit_show = True
             print("Preset 'Hardcore' geladen.")
         elif preset == "4":        # Custom
             print("Custom-Modus – du wirst nun alle Einstellungen selbst festlegen.")
-            self.verbleibende_zeit_use = get_boolean_input("Verbleibende Zeit verwenden?", True)
-            if self.verbleibende_zeit_use:
+            self.verbleibende_zeit_start = get_boolean_input("Verbleibende Zeit verwenden?", True)
+            if self.verbleibende_zeit_start:
                 self.verbleibende_zeit = get_numeric_input("Verbleibende Zeit eingeben (in Sekunden)", 300.0)
                 self.verbleibende_zeit_show = get_boolean_input("Verbleibende Zeit anzeigen?", True)
             else:
@@ -305,18 +298,18 @@ class Plattformer(arcade.Window):
 
             self.tränke = get_boolean_input("Tränke aktivieren?", True)
             self.lives = get_numeric_input("Anzahl Start-Leben eingeben", 4, int)
-            self.schaden_immun_timer_initial = get_numeric_input("Zeit der Schaden-Immunität nach einem Treffer (in Sekunden)", 3.0)
+            self.schaden_immun_timer = get_numeric_input("Zeit der Schaden-Immunität nach einem Treffer (in Sekunden)", 3.0)
             self.genutzte_zeit_show = get_boolean_input("Genutzte Zeit anzeigen?", True)
         else:
             print("Ungültige Eingabe – es wird das Preset 'Normal' verwendet.")
 
         # Timer initialisieren (einheitlich für alle Modi)
-        self.schaden_immun_timer = self.schaden_immun_timer_initial
         self.plus1herz_timer = -1.0
         self.plus2herzen_timer = -1.0
         self.zeit_multi_jump = 0.0
         self.zeit_jump_boost = 0.0
         self.genutzte_zeit = 0.0
+        self.verbleibende_zeit_use = self.verbleibende_zeit_start
 
         # Hintergrundmusik starten
         self.hintergrundmusik_sound = arcade.play_sound(self.hintergrundmusik, loop=True)
