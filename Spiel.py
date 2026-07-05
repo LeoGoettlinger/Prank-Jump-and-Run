@@ -173,8 +173,6 @@ class Plattformer(arcade.Window):
 
         self.tränke = True
 
-        self.verbleibende_zeit_start = False
-
         self.setup()
 
         self.gewonnen_sound_gespielt = False
@@ -273,14 +271,27 @@ class Plattformer(arcade.Window):
             self.verbleibende_zeit = 600.0
             self.tränke = True
             self.schaden_immun_timer_initial = 2.0
+            self.verbleibende_zeit_show = True
+            self.verbleibende_zeit_use = True
+            self.genutzte_zeit_show = True
             print("Preset 'Easy' geladen.")
         elif preset == "2":        # Normal
+            self.lives = 4
+            self.verbleibende_zeit = 300.0
+            self.tränke = True
+            self.schaden_immun_timer_initial = 3.0
+            self.verbleibende_zeit_show = True
+            self.verbleibende_zeit_use = True
+            self.genutzte_zeit_show = True
             print("Preset 'Normal' geladen.")
         elif preset == "3":        # Hardcore
             self.lives = 1
             self.verbleibende_zeit = 120.0
             self.tränke = False
             self.schaden_immun_timer_initial = 0.0
+            self.verbleibende_zeit_show = True
+            self.verbleibende_zeit_use = True
+            self.genutzte_zeit_show = True
             print("Preset 'Hardcore' geladen.")
         elif preset == "4":        # Custom
             print("Custom-Modus – du wirst nun alle Einstellungen selbst festlegen.")
@@ -306,7 +317,6 @@ class Plattformer(arcade.Window):
         self.zeit_multi_jump = 0.0
         self.zeit_jump_boost = 0.0
         self.genutzte_zeit = 0.0
-        self.verbleibende_zeit_start = self.verbleibende_zeit
 
         # Hintergrundmusik starten
         self.hintergrundmusik_sound = arcade.play_sound(self.hintergrundmusik, loop=True)
@@ -504,7 +514,7 @@ class Plattformer(arcade.Window):
             self.schaden_immun_timer -= delta_time 
             self.genutzte_zeit += delta_time
             # Use boolean logic (no bitwise &). verbleibende_zeit_start is a float timestamp here.
-            if self.verbleibende_zeit_use and self.verbleibende_zeit_start == True:
+            if self.verbleibende_zeit_use == True:
                 self.verbleibende_zeit -= delta_time
         
         if self.schaden_immun_timer <= 0:
@@ -616,97 +626,52 @@ class Plattformer(arcade.Window):
 
         #  print("Ich mag Züge4!!!!!!!!(Wenn diese Nachricht angezeigt wird dann ist on_update() durchgelaufen)")
         
-                                       
-    def on_draw(self):
 
+    def on_draw(self):
         cam_x = self.camera.position[0]
         cam_y = self.camera.position[1]
-    
-#        if self.pause == True:
-#            self.freeze_player = True
-#            arcade.draw_lrbt_rectangle_filled(cam_x + 3, cam_y + 3, arcade.color.BROWN)
-#            arcade.draw_text("PAUSE", cam_x  , cam_y  , arcade.color.WHITE, 50, font_name="Kenney Blocks", anchor_x="center",anchor_y="center")
-#            arcade.draw_text("Klicke P erneut um das Spiel fortzusetzen", cam_x + 300, cam_y  - 200, arcade.color.WHITE)
-#          #   if symbol == arcade.key.P:
-         #       self.freeze_player = False
-          #      self.pause = False
 
-#        if self.start_menu:
-#            self.clear()
-#            # Kamera NICHT benutzen im Startmenü!
-#            arcade.draw_text("Hallo!", self.width , self.height - 60, arcade.color.WHITE, 50, font_name="Kenney Blocks", anchor_x="center",anchor_y="center")
-#            arcade.draw_text("Wähle ein Schwierigkeitsgrad:", self.width , self.height - 120, arcade.color.WHITE, 24, font_name="Kenney Future", anchor_x="center",anchor_y="center")
-#            arcade.draw_text("Drücke 1 für Einfach, 2 für Normal, 3 für Schwer", self.width , self.height - 160, arcade.color.WHITE, 18, font_name="Kenney Future", anchor_x="center",anchor_y="center")
-#            arcade.draw_text(f"Aktuelle Schwierigkeit: {self.gamemode}", self.width , self.height - 200, arcade.color.WHITE, 18, font_name="Kenney Future", anchor_x="center",anchor_y="center")
- #           arcade.draw_text("Drücke ENTER um zu starten", self.width , self.height - 240, arcade.color.WHITE, 18, font_name="Kenney Future", anchor_x="center",anchor_y="center")
-#        else:
         self.clear()
-
         self.camera.use()
-
         self.szene.draw()
-
         self.spielerliste.draw()
 
-        #self.hindernisliste.draw()
+        arcade.draw_text(f"Münzen: {round(self.münzen, 1)}", cam_x + 385, cam_y - 285, font_size=18, font_name="Kenney", anchor_x="right")
+        arcade.draw_text(f"Leben: {round(self.lives, 1)}", cam_x - 288, cam_y + 270, font_size=18, font_name="Kenney", anchor_x="right")
+        arcade.draw_text(f"Schätze: {round(self.schätze, 1)}", cam_x - 273, cam_y - 285, font_size=18, font_name="Kenney", anchor_x="right")
 
-        arcade.draw_text(f"Münzen: {round(self.münzen, 1)}", cam_x + 385, cam_y  - 285,  font_size=18, font_name="Kenney", anchor_x="right")
+        if self.schaden_immun_anzeigen:
+            arcade.draw_text(f"Du kriegst noch für: {round(self.schaden_immun_timer, 1)} keinen Schaden!", cam_x + 230, cam_y - 225, font_size=18, font_name="Kenney", anchor_x="right")
+        if self.höher_springen:
+            arcade.draw_text(f"Du hast noch für {round(self.zeit_jump_boost, 1)} Sekunden Jump Boost!", cam_x + 250, cam_y - 250, font_size=18, font_name="Kenney", anchor_x="right")
+        if self.multi_jump:
+            arcade.draw_text(f"Du hast noch für {round(self.zeit_multi_jump, 1)} Sekunden Multi Jump!", cam_x + 250, cam_y - 260, font_size=18, font_name="Kenney", anchor_x="right")
+        if self.plus1herz:
+            arcade.draw_text(f"+1 Herz", cam_x + 45, cam_y - 200, font_size=18, font_name="Kenney", anchor_x="right")
+        if self.plus2herzen:
+            arcade.draw_text(f"+2 Herzen", cam_x + 45, cam_y - 210, font_size=18, font_name="Kenney", anchor_x="right")
+        if self.verbleibende_zeit_show:
+            arcade.draw_text(f"Verbleibende Zeit: {round(self.verbleibende_zeit, 1)} Sekunden", cam_x + 385, cam_y + 265, font_size=18, font_name="Kenney", anchor_x="right")
+        if self.genutzte_zeit_show:
+            arcade.draw_text(f"Genutzte Zeit: {round(self.genutzte_zeit, 1)} Sekunden", cam_x + 385, cam_y + 245, font_size=18, font_name="Kenney", anchor_x="right")
 
-        arcade.draw_text(f"Leben: {round(self.lives, 1)}", cam_x + -288, cam_y  - -270,  font_size=18, font_name="Kenney", anchor_x="right")
-
-        arcade.draw_text(f"Schätze: {round(self.schätze, 1)}", cam_x + -273, cam_y  - 285,  font_size=18, font_name="Kenney", anchor_x="right")
-
-#        if self.koordinaten_anzeigen == True:
-#            arcade.draw_text(f"Koordinaten: X: {round(self.spielfigur.center_x)}, Y: {round(self.spielfigur.center_y)}", cam_x + 150, cam_y - 215,  font_size=18, anchor_x="right")
-
-        if self.schaden_immun_anzeigen == True:
-            arcade.draw_text(f"Du kriegst noch für: {round(self.schaden_immun_timer, 1)} keinen Schaden!", cam_x + 230, cam_y  - 225,  font_size=18, font_name="Kenney", anchor_x="right")
-        
-        if self.höher_springen == True:
-            arcade.draw_text(f"Du hast noch für {round(self.zeit_jump_boost, 1)} Sekunden Jump Boost!", cam_x + 250, cam_y  - 250,  font_size=18, font_name="Kenney", anchor_x="right")
-        
-        if self.multi_jump == True:
-            arcade.draw_text(f"Du hast noch für {round(self.zeit_multi_jump, 1)} Sekunden Multi Jump!", cam_x + 250, cam_y  - 260,  font_size=18, font_name="Kenney", anchor_x="right")
-            
-        if self.plus1herz == True:
-            arcade.draw_text(f"+1 Herz", cam_x + 45, cam_y  - 200,  font_size=18, font_name="Kenney", anchor_x="right")
-        
-        if self.plus2herzen == True:
-            arcade.draw_text(f"+2 Herzen", cam_x + 45, cam_y  - 210,  font_size=18, font_name="Kenney", anchor_x="right")
-        
-        if self.verbleibende_zeit_show == True:
-            arcade.draw_text(f"Verbleibende Zeit: {round(self.verbleibende_zeit, 1)} Sekunden", cam_x + 385, cam_y  + 265,  font_size=18, font_name="Kenney", anchor_x="right")
-        if self.genutzte_zeit_show == True:
-            arcade.draw_text(f"Genutzte Zeit: {round(self.genutzte_zeit, 1)} Sekunden", cam_x + 385, cam_y  + 245,  font_size=18, font_name="Kenney", anchor_x="right")
-
-    #  arcade.draw_text(f"Münzen: {round(self.münzen, 1)}", 780, 20,  font_size=18, font_name="Kenney", anchor_x="right")
-
-    #   arcade.draw_text(f"Münzen: {round(self.münzen, 1)}", 780, 20,  font_size=18, font_name="Kenney", anchor_x="right")
-        
-    #  arcade.draw_text(f"Münzen: {round(self.münzen, 1)}", 780, 20,  font_size=18, font_name="Kenney", anchor_x="right")
-
-        #print("Ich mag Züge5!!!!!!!!(Wenn diese Nachricht angezeigt wird dann ist on_draw() durchgelaufen)")
-        if self.gewonnen == True:
+        if self.gewonnen:
             self.interact = False
-#                arcade.play_sound(self.audio_shutdown)
-            if self.hintergrundmusik_sound.is_playing():
+            if self.hintergrundmusik_sound and self.hintergrundmusik_sound.playing:
                 arcade.stop_sound(self.hintergrundmusik_sound)
             arcade.draw_lrbt_rectangle_filled(cam_x - 400, cam_x + 400, cam_y - 300, cam_y + 300, arcade.color.GREEN)
-            arcade.draw_text("GEWONNEN", cam_x + 3, cam_y + 3, arcade.color.WHITE, 50, font_name="Kenney Blocks", anchor_x="center",anchor_y="center")
+            arcade.draw_text("GEWONNEN", cam_x, cam_y, arcade.color.WHITE, 50, font_name="Kenney Blocks", anchor_x="center", anchor_y="center")
             arcade.draw_text("Klicke R um das Spiel erneut zu starten", cam_x - 125, cam_y - 70, arcade.color.WHITE)
 
-        if self.verloren == True:
+        if self.verloren:
             self.interact = False
-            if self.hintergrundmusik_sound.is_playing():
+            if self.hintergrundmusik_sound and self.hintergrundmusik_sound.playing:
                 arcade.stop_sound(self.hintergrundmusik_sound)
-            if self.epic_music_sound.is_playing():
+            if self.epic_music_sound and self.epic_music_sound.playing:
                 arcade.stop_sound(self.epic_music_sound)
             arcade.draw_lrbt_rectangle_filled(cam_x - 400, cam_x + 400, cam_y - 300, cam_y + 300, arcade.color.RED)
-            # arcade.draw_lrtb_rectangle_filled(0, self.camera, self.camera.position , 0, arcade.color.RED)
-            arcade.draw_text("VERLOREN", cam_x + 3, cam_y + 3, arcade.color.WHITE, 50, font_name="Kenney Blocks", anchor_x="center",anchor_y="center")
+            arcade.draw_text("VERLOREN", cam_x, cam_y, arcade.color.WHITE, 50, font_name="Kenney Blocks", anchor_x="center", anchor_y="center")
             arcade.draw_text("Klicke R um das Spiel erneut zu starten", cam_x - 125, cam_y - 70, arcade.color.WHITE)
-
-
 
 Plattformer()
 arcade.run()
