@@ -691,7 +691,8 @@ class Plattformer(arcade.Window):
         # 5. Kamera-Position zurücksetzen (verhindert Bild-Sprünge beim Instaspawn)
         self.camera.position = (self.width / 2, self.height / 2)
 
-        # 6. Die Map frisch aus der TMX-Datei laden (belebt alle gelöschten Objekte wieder!)
+        # 6. Die Map komplett neu von der Festplatte laden, damit alle gelöschten Objekte wieder da sind!
+        self.tile_map = arcade.load_tilemap("Jump And Run.tmx", use_spatial_hash=True) # <-- DIESE ZEILE HIER ERGÄNZEN
         self.szene = arcade.Scene.from_tilemap(self.tile_map)
 
         # 7. Spielerfigur zurücksetzen und der neuen Szene hinzufügen
