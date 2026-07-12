@@ -175,11 +175,13 @@ class Plattformer(arcade.Window):
 
         self.tränke = True
 
-        self.setup()
-
         self.gewonnen_sound_gespielt = False
 
         self.level3_music_switched = False
+
+        self.erstes_update = True
+
+        self.setup()
 
 #        self.ich_habe_keine_ahnung = print("Ich habe keine Ahnung!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 #        print("Ich mag Züge!!!!!!!!(Wenn diese Nachricht angezeigt wird dann ist __init__ durchgelaufen)")
@@ -312,6 +314,16 @@ class Plattformer(arcade.Window):
         self.genutzte_zeit = 0.0
         self.verbleibende_zeit_use = self.verbleibende_zeit_start  # Timer nur aktivieren, wenn der Spieler dies gewählt hat
 
+        # === NEU: Einstellungen für den lautlosen Reset sichern ===
+        self.initial_lives = self.lives
+        self.initial_verbleibende_zeit = self.verbleibende_zeit
+        self.initial_tränke = self.tränke
+        self.initial_schaden_immun_timer = self.schaden_immun_timer
+        self.initial_verbleibende_zeit_show = self.verbleibende_zeit_show
+        self.initial_verbleibende_zeit_start = self.verbleibende_zeit_start
+        self.initial_verbleibende_zeit_use = self.verbleibende_zeit_use
+        self.initial_genutzte_zeit_show = self.genutzte_zeit_show
+
         # Hintergrundmusik starten
         self.hintergrundmusik_sound = arcade.play_sound(self.hintergrundmusik, loop=True)
 
@@ -389,7 +401,10 @@ class Plattformer(arcade.Window):
             return wert
 
     def on_update(self, delta_time):
-        
+
+        if self.erstes_update:
+            self.erstes_update = False
+            return
 
         self.camera.position = (self._clamp(self.spielfigur.position[0], self.width / 2, self.tile_map.width * self.tile_map.tile_width * self.tile_map.scaling - self.width / 2), self._clamp(self.spielfigur.position[1], self.height / 2, self.tile_map.height * self.tile_map.tile_height * self.tile_map.scaling - self.height / 2))
 
@@ -413,7 +428,7 @@ class Plattformer(arcade.Window):
         if self.zeit_jump_boost <= 0:
             self.höher_springen = False
             self.springen_höhe = 0.65
-            self.physik_engine.gravity_constant = 0.166
+            self.physik_engine.gravity_constant = 0.1
             self.zeit_jump_boost = 0
 
         if self.plus1herz_timer > 0:
@@ -448,12 +463,11 @@ class Plattformer(arcade.Window):
                 trank.kill()
                 self.trank_player = arcade.play_sound(self.trank_sound)
 
-        if arcade.check_for_collision_with_list(self.spielfigur, self.schatz_liste):
-            hit_list = arcade.check_for_collision_with_list(self.spielfigur, self.schatz_liste)
-            for schatz in hit_list:
-                self.schätze += 1 # This should be outside the loop if only one treasure is picked up at a time
-                schatz.kill()
-                self.item_player = arcade.play_sound(self.item_sound)
+        hit_list = arcade.check_for_collision_with_list(self.spielfigur, self.schatz_liste)
+        for schatz in hit_list:
+            self.schätze += 1 # This should be outside the loop if only one treasure is picked up at a time
+            schatz.kill()
+            self.item_player = arcade.play_sound(self.item_sound)
 
         if arcade.check_for_collision_with_list(self.spielfigur, self.key_schatzraum):
             self.advancement_player = arcade.play_sound(self.advancement_sound)
@@ -537,12 +551,11 @@ class Plattformer(arcade.Window):
             self.schlüssel_level1 = True
             self.szene.get_sprite_list("Schlüssel 1").clear()
 
-        if arcade.check_for_collision_with_list(self.spielfigur, self.münzen_spritelist):
-            hit_list = arcade.check_for_collision_with_list(self.spielfigur, self.münzen_spritelist)
-            for münze in hit_list:
-                self.münzen += 1 # This should be outside the loop if only one coin is picked up at a time
-                münze.kill()
-                self.coin_player = arcade.play_sound(self.coin_sound)
+        hit_list = arcade.check_for_collision_with_list(self.spielfigur, self.münzen_spritelist)
+        for münze in hit_list:
+            self.münzen += 1 # This should be outside the loop if only one coin is picked up at a time
+            münze.kill()
+            self.coin_player = arcade.play_sound(self.coin_sound)
         
         if self.schaden_immun == False:
             if arcade.check_for_collision_with_list(self.spielfigur, self.szene.get_sprite_list("Stachel")):
@@ -551,23 +564,20 @@ class Plattformer(arcade.Window):
                 self.schaden_immun = True
                 self.schaden_immun_timer = 3
                 self.schaden_immun_anzeigen = True
-        
+                
         if self.reset == True:
-            if self.hintergrundmusik_sound and self.hintergrundmusik_sound.playing:
+            # Alle eventuell laufenden Sounds stoppen
+            if self.hintergrundmusik_sound:
                 arcade.stop_sound(self.hintergrundmusik_sound)
-                arcade.play_sound(self.audio_shutdown)
-                self.interact = False
-                self.__init__()
-            elif self.epic_music_sound and self.epic_music_sound.playing:
+            if self.epic_music_sound:
                 arcade.stop_sound(self.epic_music_sound)
-                arcade.play_sound(self.audio_shutdown)
-                self.interact = False
-                self.__init__()
-            elif self.verloren_sound_player and self.verloren_sound_player.playing:
+            if self.verloren_sound_player:
                 arcade.stop_sound(self.verloren_sound_player)
-                arcade.play_sound(self.audio_shutdown)
-                self.interact = False
-                self.__init__()
+
+            # Shutdown abspielen und neu initialisieren
+            arcade.play_sound(self.audio_shutdown)
+            self.reset_gameplay()
+            return
 
         if arcade.check_for_collision_with_list(self.spielfigur, self.szene.get_sprite_list("Reader 1")) and self.schlüssel_level1 == True:
             print("Ich mag Züge!!")
@@ -620,6 +630,108 @@ class Plattformer(arcade.Window):
     #     arcade.check_for_collision(self.spielerliste, self.spielfigur, self.gewonnen)
 
         #  print("Ich mag Züge4!!!!!!!!(Wenn diese Nachricht angezeigt wird dann ist on_update() durchgelaufen)")
+
+    def reset_gameplay(self):
+        # 1. Preset-Einstellungen aus dem ersten Terminal-Setup wiederherstellen
+        self.lives = self.initial_lives
+        self.verbleibende_zeit = self.initial_verbleibende_zeit
+        self.tränke = self.initial_tränke
+        self.schaden_immun_timer = self.initial_schaden_immun_timer
+        self.verbleibende_zeit_show = self.initial_verbleibende_zeit_show
+        self.verbleibende_zeit_start = self.initial_verbleibende_zeit_start
+        self.verbleibende_zeit_use = self.initial_verbleibende_zeit_use
+        self.genutzte_zeit_show = self.initial_genutzte_zeit_show
+
+        # 2. Spiel-Timer und Sammel-Werte komplett nullen
+        self.plus1herz_timer = -1.0
+        self.plus2herzen_timer = -1.0
+        self.zeit_multi_jump = 0.0
+        self.zeit_jump_boost = 0.0
+        self.genutzte_zeit = 0.0
+        self.münzen = 0
+        self.schätze = 0
+
+        # 3. Alle Status-Flags ausnahmslos in den Startzustand versetzen
+        self.reset = False
+        self.interact = True
+        self.gewonnen = False
+        self.verloren = False
+        self.verloren_sound_gespielt = False
+        self.gewonnen_sound_gespielt = False
+        self.level3_music_switched = False
+        self.erstes_update = True
+        self.key_level_2_have = False
+        self.key_schatzraum_have = False
+        self.schlüssel_level1 = False
+        self.level_1 = False
+        self.level_2 = False
+        self.level_3 = False
+        self.multi_jump = False
+        self.höher_springen = False
+        self.jump_boost = False
+        self.schaden_immun = False
+        self.schaden_immun_anzeigen = False
+        self.start_menu = True
+        self.freeze_player = False
+        self.springen_höhe = 0.65
+
+        # 4. Aktive Sound-Kanäle und Player-Referenzen bereinigen
+        self.shutdownsound = None
+        self.errorsound = None
+        self.verloren_sound_player = None
+        self.hackedsound = None
+        self.nebenrisiken_sound = None
+        self.epic_music_sound = None
+        self.advancement_player = None
+        self.coin_player = None
+        self.trank_player = None
+        self.item_player = None
+        self.damage_player = None
+
+        # 5. Kamera-Position zurücksetzen (verhindert Bild-Sprünge beim Instaspawn)
+        self.camera.position = (self.width / 2, self.height / 2)
+
+        # 6. Die Map frisch aus der TMX-Datei laden (belebt alle gelöschten Objekte wieder!)
+        self.szene = arcade.Scene.from_tilemap(self.tile_map)
+
+        # 7. Spielerfigur zurücksetzen und der neuen Szene hinzufügen
+        self.spielfigur.center_x = 20
+        self.spielfigur.center_y = 308
+        self.spielfigur.change_x = 0
+        self.spielfigur.change_y = 0
+        self.spielerliste = arcade.SpriteList()
+        self.spielerliste.append(self.spielfigur)
+        self.szene.add_sprite("Spielfigur", self.spielfigur)
+
+        # 8. ALLE Sprite-Listen-Referenzen (Mauern, Schlüssel, Tore) neu an die frische Map binden
+        self.walls = [
+            self.szene.get_sprite_list("Tile Layer 1"), 
+            self.szene.get_sprite_list("Röhre"), 
+            self.szene.get_sprite_list("Unsichtbare Blöcke"), 
+            self.szene.get_sprite_list("Tor 1"), 
+            self.szene.get_sprite_list("Tor 2"), 
+            self.szene.get_sprite_list("Schatz-Raum Verschließ-Blöcke")
+        ]
+        self.münzen_spritelist = self.szene.get_sprite_list("Münzen")
+        self.tor1 = [self.szene.get_sprite_list("Tor 1"), self.szene.get_sprite_list("Reader 1")]
+        self.tränke_multi_jump_spritelist = self.szene.get_sprite_list("Tränke Multi_Jump")
+        self.tränke_plus_ein_herz_spritelist = self.szene.get_sprite_list("Tränke + 1 Herz")
+        self.tränke_plus_zwei_herzen_spritelist = self.szene.get_sprite_list("Tränke + 2 Herzen")
+        self.tränke_jump_boost_spritelist = self.szene.get_sprite_list("Tränke Jump_Boost")
+        self.ladder_liste = self.szene.get_sprite_list("Wasser")
+        self.key_schatzraum = self.szene.get_sprite_list("Schlüssel Schatz-Raum")
+        self.key_level_2 = self.szene.get_sprite_list("Schlüssel 2")
+        self.tor2 = [self.szene.get_sprite_list("Tor 2"), self.szene.get_sprite_list("Hebel Level 2")]
+        self.schatzraum_protector = [self.szene.get_sprite_list("Schatz-Raum Verschließ-Blöcke"), self.szene.get_sprite_list("Activate Schatz-Raum")]
+        self.schatz_liste = self.szene.get_sprite_list("Schatz-Kiste")
+
+        # 9. Physik-Engine mit der komplett zurückgesetzten Wall-Liste neu initialisieren
+        self.physik_engine = arcade.PhysicsEnginePlatformer(
+            player_sprite=self.spielfigur, platforms=self.walls, gravity_constant=0.1, ladders=self.ladder_liste
+        )
+
+        # 10. Normale Hintergrundmusik wieder von vorne starten
+        self.hintergrundmusik_sound = arcade.play_sound(self.hintergrundmusik, loop=True)
         
 
     def on_draw(self):
