@@ -294,7 +294,7 @@ class Plattformer(arcade.Window):
                 self.verbleibende_zeit = get_numeric_input("Verbleibende Zeit eingeben (in Sekunden)", 300.0)
                 self.verbleibende_zeit_show = get_boolean_input("Verbleibende Zeit anzeigen?", True)
             else:
-                self.verbleibende_zeit = 300.0
+                self.verbleibende_zeit_use = False
                 self.verbleibende_zeit_show = False
 
             self.tränke = get_boolean_input("Tränke aktivieren?", True)
@@ -310,7 +310,7 @@ class Plattformer(arcade.Window):
         self.zeit_multi_jump = 0.0
         self.zeit_jump_boost = 0.0
         self.genutzte_zeit = 0.0
-        self.verbleibende_zeit_start = self.verbleibende_zeit_use 
+        self.verbleibende_zeit_use = self.verbleibende_zeit_start  # Timer nur aktivieren, wenn der Spieler dies gewählt hat
 
         # Hintergrundmusik starten
         self.hintergrundmusik_sound = arcade.play_sound(self.hintergrundmusik, loop=True)
