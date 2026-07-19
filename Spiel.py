@@ -303,6 +303,7 @@ class Plattformer(arcade.Window):
             self.lives = get_numeric_input("Anzahl Start-Leben eingeben", 4, int)
             self.schaden_immun_timer = get_numeric_input("Zeit der Schaden-Immunität nach einem Treffer (in Sekunden)", 3.0)
             self.genutzte_zeit_show = get_boolean_input("Genutzte Zeit anzeigen?", True)
+            self.genutzte_zeit_use = get_boolean_input("Genutzte Zeit aktivieren?", True)
         else:
             print("Ungültige Eingabe – es wird das Preset 'Normal' verwendet.")
 
@@ -323,6 +324,9 @@ class Plattformer(arcade.Window):
         self.initial_verbleibende_zeit_start = self.verbleibende_zeit_start
         self.initial_verbleibende_zeit_use = self.verbleibende_zeit_use
         self.initial_genutzte_zeit_show = self.genutzte_zeit_show
+        self.initial_genutzte_zeit_use = self.genutzte_zeit_use
+
+        self.genutzte_zeit_use = self.genutzte_zeit_show
 
         # Hintergrundmusik starten
         self.hintergrundmusik_sound = arcade.play_sound(self.hintergrundmusik, loop=True)
@@ -641,6 +645,7 @@ class Plattformer(arcade.Window):
         self.verbleibende_zeit_start = self.initial_verbleibende_zeit_start
         self.verbleibende_zeit_use = self.initial_verbleibende_zeit_use
         self.genutzte_zeit_show = self.initial_genutzte_zeit_show
+        self.genutzte_zeit_use = self.initial_genutzte_zeit_use
 
         # 2. Spiel-Timer und Sammel-Werte komplett nullen
         self.plus1herz_timer = -1.0
@@ -776,7 +781,9 @@ class Plattformer(arcade.Window):
             arcade.draw_text(f"Schätze: {round(self.schätze, 1)}", cam_x - 273, cam_y - 285, font_size=18, font_name="Kenney", anchor_x="right")
             if self.verbleibende_zeit_use == True:
                 arcade.draw_text(f"Verbleibende Zeit: {round(self.verbleibende_zeit, 1)} Sekunden", cam_x + 385, cam_y + 265, font_size=18, font_name="Kenney", anchor_x="right")
-            arcade.draw_text(f"Genutzte Zeit: {round(self.genutzte_zeit, 1)} Sekunden", cam_x + 385, cam_y + 245, font_size=18, font_name="Kenney", anchor_x="right")
+            if self.genutzte_zeit_use == True:
+                self.genutzte_zeit_use = False  # Verhindert, dass die Zeit weiterläuft, nachdem das Spiel gewonnen wurde
+                arcade.draw_text(f"Genutzte Zeit: {round(self.genutzte_zeit, 1)} Sekunden", cam_x + 385, cam_y + 245, font_size=18, font_name="Kenney", anchor_x="right")
 
         if self.verloren:
             self.interact = False
@@ -793,7 +800,9 @@ class Plattformer(arcade.Window):
             arcade.draw_text(f"Schätze: {round(self.schätze, 1)}", cam_x - 273, cam_y - 285, font_size=18, font_name="Kenney", anchor_x="right")
             if self.verbleibende_zeit_use == True:
                 arcade.draw_text(f"Verbleibende Zeit: {round(self.verbleibende_zeit, 1)} Sekunden", cam_x + 385, cam_y + 265, font_size=18, font_name="Kenney", anchor_x="right")
-            arcade.draw_text(f"Genutzte Zeit: {round(self.genutzte_zeit, 1)} Sekunden", cam_x + 385, cam_y + 245, font_size=18, font_name="Kenney", anchor_x="right")
+            if self.genutzte_zeit_use == True:
+                self.genutzte_zeit_use = False  # Verhindert, dass die Zeit weiterläuft, nachdem das Spiel verloren wurde
+                arcade.draw_text(f"Genutzte Zeit: {round(self.genutzte_zeit, 1)} Sekunden", cam_x + 385, cam_y + 245, font_size=18, font_name="Kenney", anchor_x="right")
 
 Plattformer()
 arcade.run()
