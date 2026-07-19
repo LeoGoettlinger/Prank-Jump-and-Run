@@ -181,6 +181,14 @@ class Plattformer(arcade.Window):
 
         self.erstes_update = True
 
+        self.achievement_timer = 0.0
+
+        self.achievement_displayed = False
+
+        self.achievement = None
+
+        self.genutzte_zeit_use = True
+
         self.setup()
 
 #        self.ich_habe_keine_ahnung = print("Ich habe keine Ahnung!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
@@ -423,6 +431,13 @@ class Plattformer(arcade.Window):
         self.plus1herz_timer -= delta_time
 
         self.plus2herzen_timer -= delta_time
+
+        self.achievement_timer -= delta_time
+
+        if self.achievement_timer <= 0:
+            self.achievement_displayed = False
+            self.achievement = None
+            self.achievement_timer = 0.0
         
         if self.zeit_multi_jump <= 0:
             self.multi_jump = False
@@ -478,6 +493,9 @@ class Plattformer(arcade.Window):
 #            for key in arcade.check_for_collision_with_list(self.spielfigur, self.key_schatzraum):
             self.key_schatzraum_have = True
             self.szene.get_sprite_list("Schlüssel Schatz-Raum").clear()
+            self.achievement_timer = 2
+            self.achievement_displayed = True
+            self.achievement = "Key gefunden!"
 
         if arcade.check_for_collision_with_list(self.spielfigur, self.szene.get_sprite_list("Activate Schatz-Raum")) and self.key_schatzraum_have == True:
 #            for tor2 in arcade.check_for_collision_with_list(self.spielfigur, self.schatzraum_protector):
@@ -485,12 +503,18 @@ class Plattformer(arcade.Window):
             self.szene.get_sprite_list("Activate Schatz-Raum").clear()
             self.szene.get_sprite_list("Schatz-Raum Verschließ-Blöcke").clear()
             self.advancement_player = arcade.play_sound(self.advancement_sound)
+            self.achievement_timer = 3
+            self.achievement_displayed = True
+            self.achievement = "Schatzraum geöffnet!"
 
         if arcade.check_for_collision_with_list(self.spielfigur, self.key_level_2):
 #            for key in arcade.check_for_collision_with_list(self.spielfigur, self.key_level_2):
             self.key_level_2_have = True
             self.szene.get_sprite_list("Schlüssel 2").clear()
             self.advancement_player = arcade.play_sound(self.advancement_sound)
+            self.achievement_timer = 2
+            self.achievement_displayed = True
+            self.achievement = "Key gefunden!"
             
         if arcade.check_for_collision_with_list(self.spielfigur, self.szene.get_sprite_list("Hebel Level 2")) and self.key_level_2_have == True:
 #            for tor3 in arcade.check_for_collision_with_list(self.spielfigur, self.tor2):
@@ -499,6 +523,9 @@ class Plattformer(arcade.Window):
             self.szene.get_sprite_list("Tor 2").clear()
             self.advancement_player = arcade.play_sound(self.advancement_sound)
             self.level_3 = True
+            self.achievement_timer = 4
+            self.achievement_displayed = True
+            self.achievement = "Level 3 geöffnet!"
 
         if self.tränke == True:
             hit_list = arcade.check_for_collision_with_list(self.spielfigur, self.tränke_multi_jump_spritelist)
@@ -551,9 +578,12 @@ class Plattformer(arcade.Window):
 #            for schlüssel in arcade.check_for_collision_with_list(self.spielfigur, self.szene.get_sprite_list("Schlüssel 1")):
             self.spielfigur.center_x = 788
             self.spielfigur.center_y = 370
-            print("ICH MAG ZÜGE!")
             self.schlüssel_level1 = True
+            self.advancement_player = arcade.play_sound(self.advancement_sound)
             self.szene.get_sprite_list("Schlüssel 1").clear()
+            self.achievement_timer = 2
+            self.achievement_displayed = True
+            self.achievement = "Key gefunden!"
 
         hit_list = arcade.check_for_collision_with_list(self.spielfigur, self.münzen_spritelist)
         for münze in hit_list:
@@ -584,12 +614,14 @@ class Plattformer(arcade.Window):
             return
 
         if arcade.check_for_collision_with_list(self.spielfigur, self.szene.get_sprite_list("Reader 1")) and self.schlüssel_level1 == True:
-            print("Ich mag Züge!!")
 #            for tor1 in arcade.check_for_collision_with_list(self.spielfigur, self.tor1):
             self.walls = [self.szene.get_sprite_list("Tile Layer 1"), self.szene.get_sprite_list("Röhre"), self.szene.get_sprite_list("Unsichtbare Blöcke"), self.szene.get_sprite_list("Tor 2"), self.szene.get_sprite_list("Schatz-Raum Verschließ-Blöcke")]
             self.szene.get_sprite_list("Reader 1").clear()
             self.szene.get_sprite_list("Tor 1").clear()
             self.advancement_player = arcade.play_sound(self.advancement_sound)
+            self.achievement_timer = 4
+            self.achievement_displayed = True
+            self.achievement = "Level 2 freigeschaltet!"
 
         if self.lives == 0:
             self.verloren = True
@@ -767,6 +799,8 @@ class Plattformer(arcade.Window):
             arcade.draw_text(f"Verbleibende Zeit: {round(self.verbleibende_zeit, 1)} Sekunden", cam_x + 385, cam_y + 265, font_size=18, font_name="Kenney", anchor_x="right")
         if self.genutzte_zeit_show:
             arcade.draw_text(f"Genutzte Zeit: {round(self.genutzte_zeit, 1)} Sekunden", cam_x + 385, cam_y + 245, font_size=18, font_name="Kenney", anchor_x="right")
+        if self.achievement_displayed:
+            arcade.draw_text(f"{self.achievement}", cam_x, cam_y + 20, font_size=18, font_name="Kenney", anchor_x="center", anchor_y="center")
 
         if self.gewonnen:
             self.verbleibende_zeit_start = False
