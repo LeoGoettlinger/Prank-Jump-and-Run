@@ -187,6 +187,14 @@ class Plattformer(arcade.Window):
 
         self.achievement = None
 
+        self.achievement_stack = None
+
+        self.achievement_stack_timer = 0.0
+
+        self.achievement_new = None
+
+        self.achievement_timer_new = 0.0
+
         self.genutzte_zeit_use = True
 
         self.setup()
@@ -341,7 +349,7 @@ class Plattformer(arcade.Window):
 
         print("\nFERTIG! Das Spiel startet jetzt.")
         print(line)
-        print("Funfact: Marcus hat das Game auf Hardcore mit 1 Leben und 30 Sekunden noch übrig gewonnen. Schaffst du das auch? ;)")
+        print("Funfact: Marcus hat das Game auf Hardcore mit 1 Leben und 60.4 Sekunden noch übrig gewonnen. Schaffst du das auch? ;)")
         print(line)
 
     def on_key_press(self, symbol, modifiers):
@@ -432,7 +440,47 @@ class Plattformer(arcade.Window):
 
         self.plus2herzen_timer -= delta_time
 
+        # Achievement-Timer aktualisieren
         self.achievement_timer -= delta_time
+        self.achievement_stack_timer -= delta_time
+
+        # --- NEUE LOGIK FÜR ACHIEVEMENTS (angepasst an deine Beschreibung) ---
+        # Wenn ein neues Achievement empfangen wird
+        if self.achievement_new is not None:
+            # Falls gerade *kein* Achievement angezeigt wird (Timer abgelaufen)
+            if self.achievement_timer <= 0:
+                # Zeige das neue Achievement direkt an
+                self.achievement = self.achievement_new
+                self.achievement_timer = self.achievement_timer_new
+                self.achievement_displayed = True
+            # Falls gerade *ein* Achievement angezeigt wird (Timer läuft noch)
+            else:
+                # Lege das neue Achievement in den Stack
+                # (Das alte Achievement im Stack würde hier überschrieben)
+                self.achievement_stack = self.achievement_new
+                self.achievement_stack_timer = self.achievement_timer_new
+            # Zurücksetzen der neuen Achievement-Daten
+            self.achievement_new = None
+            self.achievement_timer_new = 0.0
+
+        # Wenn das *aktuelle* Achievement fertig angezeigt ist
+        if self.achievement_timer <= 0 and self.achievement is not None:
+            # Verstecke das aktuelle Achievement
+            self.achievement_displayed = False
+            self.achievement = None
+            self.achievement_timer = 0.0
+            # Achievement aus dem Stack (falls vorhanden) wird automatisch im nächsten Frame
+            # (oder sobald ein neues Achievement eintrifft und der Timer <= 0 ist) behandelt
+
+        # Wenn das *aktuelle* Achievement fertig ist UND ein Achievement im Stack wartet
+        if self.achievement_timer <= 0 and self.achievement is None and self.achievement_stack is not None:
+            # Verschiebe das Achievement aus dem Stack ins Haupt-Achievement
+            self.achievement = self.achievement_stack
+            self.achievement_timer = self.achievement_stack_timer
+            self.achievement_displayed = True
+            # Leere den Stack
+            self.achievement_stack = None
+            self.achievement_stack_timer = 0.0
 
         if self.achievement_timer <= 0:
             self.achievement_displayed = False
@@ -493,9 +541,9 @@ class Plattformer(arcade.Window):
 #            for key in arcade.check_for_collision_with_list(self.spielfigur, self.key_schatzraum):
             self.key_schatzraum_have = True
             self.szene.get_sprite_list("Schlüssel Schatz-Raum").clear()
-            self.achievement_timer = 2
+            self.achievement_timer_new = 2
             self.achievement_displayed = True
-            self.achievement = "Key gefunden!"
+            self.achievement_new = "Key gefunden!"
 
         if arcade.check_for_collision_with_list(self.spielfigur, self.szene.get_sprite_list("Activate Schatz-Raum")) and self.key_schatzraum_have == True:
 #            for tor2 in arcade.check_for_collision_with_list(self.spielfigur, self.schatzraum_protector):
@@ -503,18 +551,18 @@ class Plattformer(arcade.Window):
             self.szene.get_sprite_list("Activate Schatz-Raum").clear()
             self.szene.get_sprite_list("Schatz-Raum Verschließ-Blöcke").clear()
             self.advancement_player = arcade.play_sound(self.advancement_sound)
-            self.achievement_timer = 3
+            self.achievement_timer_new = 3
             self.achievement_displayed = True
-            self.achievement = "Schatzraum geöffnet!"
+            self.achievement_new = "Schatzraum geöffnet!"
 
         if arcade.check_for_collision_with_list(self.spielfigur, self.key_level_2):
 #            for key in arcade.check_for_collision_with_list(self.spielfigur, self.key_level_2):
             self.key_level_2_have = True
             self.szene.get_sprite_list("Schlüssel 2").clear()
             self.advancement_player = arcade.play_sound(self.advancement_sound)
-            self.achievement_timer = 2
+            self.achievement_timer_new = 2
             self.achievement_displayed = True
-            self.achievement = "Key gefunden!"
+            self.achievement_new = "Key gefunden!"
             
         if arcade.check_for_collision_with_list(self.spielfigur, self.szene.get_sprite_list("Hebel Level 2")) and self.key_level_2_have == True:
 #            for tor3 in arcade.check_for_collision_with_list(self.spielfigur, self.tor2):
@@ -523,9 +571,9 @@ class Plattformer(arcade.Window):
             self.szene.get_sprite_list("Tor 2").clear()
             self.advancement_player = arcade.play_sound(self.advancement_sound)
             self.level_3 = True
-            self.achievement_timer = 4
+            self.achievement_timer_new = 4
             self.achievement_displayed = True
-            self.achievement = "Level 3 geöffnet!"
+            self.achievement_new = "Level 3 geöffnet!"
 
         if self.tränke == True:
             hit_list = arcade.check_for_collision_with_list(self.spielfigur, self.tränke_multi_jump_spritelist)
@@ -554,7 +602,7 @@ class Plattformer(arcade.Window):
             self.schaden_immun_timer -= delta_time 
             self.genutzte_zeit += delta_time
             # Use boolean logic (no bitwise &). verbleibende_zeit_start is a float timestamp here.
-            if self.verbleibende_zeit_use and self.verbleibende_zeit_start == True:
+            if self.verbleibende_zeit_use and self.verbleibende_zeit_start:
                 self.verbleibende_zeit -= delta_time
         
         if self.schaden_immun_timer <= 0:
@@ -581,9 +629,9 @@ class Plattformer(arcade.Window):
             self.schlüssel_level1 = True
             self.advancement_player = arcade.play_sound(self.advancement_sound)
             self.szene.get_sprite_list("Schlüssel 1").clear()
-            self.achievement_timer = 2
+            self.achievement_timer_new = 2
             self.achievement_displayed = True
-            self.achievement = "Key gefunden!"
+            self.achievement_new = "Key gefunden!"
 
         hit_list = arcade.check_for_collision_with_list(self.spielfigur, self.münzen_spritelist)
         for münze in hit_list:
@@ -619,9 +667,9 @@ class Plattformer(arcade.Window):
             self.szene.get_sprite_list("Reader 1").clear()
             self.szene.get_sprite_list("Tor 1").clear()
             self.advancement_player = arcade.play_sound(self.advancement_sound)
-            self.achievement_timer = 4
+            self.achievement_timer_new = 4
             self.achievement_displayed = True
-            self.achievement = "Level 2 freigeschaltet!"
+            self.achievement_new = "Level 2 freigeschaltet!"
 
         if self.lives == 0:
             self.verloren = True
@@ -711,6 +759,14 @@ class Plattformer(arcade.Window):
         self.start_menu = True
         self.freeze_player = False
         self.springen_höhe = 0.65
+        self.achievement_timer_new = 0.0
+        self.achievement_displayed = False
+        self.achievement_timer = 0.0
+        self.achievement_new = None
+        self.achievement_stack = None
+        self.achievement_stack_timer = 0.0
+        self.achievement = None
+        self.achievement_timer_new = 0.0
 
         # 4. Aktive Sound-Kanäle und Player-Referenzen bereinigen
         self.shutdownsound = None
@@ -799,8 +855,17 @@ class Plattformer(arcade.Window):
             arcade.draw_text(f"Verbleibende Zeit: {round(self.verbleibende_zeit, 1)} Sekunden", cam_x + 385, cam_y + 265, font_size=18, font_name="Kenney", anchor_x="right")
         if self.genutzte_zeit_show:
             arcade.draw_text(f"Genutzte Zeit: {round(self.genutzte_zeit, 1)} Sekunden", cam_x + 385, cam_y + 245, font_size=18, font_name="Kenney", anchor_x="right")
-        if self.achievement_displayed:
-            arcade.draw_text(f"{self.achievement}", cam_x, cam_y + 20, font_size=18, font_name="Kenney", anchor_x="center", anchor_y="center")
+        # Achievement anzeigen (das Haupt-Achievement)
+        if self.achievement_displayed and self.achievement is not None:
+            # Zeichne das aktuell angezeigte Achievement
+            arcade.draw_text(f"{self.achievement}", cam_x, cam_y + 60, font_size=18, font_name="Kenney", anchor_x="center", anchor_y="center")
+
+        # Achievement aus dem Stack anzeigen (z.B. darunter), wenn es existiert
+        # Korrektur: Prüfe auf None, nicht auf True
+        if self.achievement_stack is not None:
+            # Zeige das Achievement im Stack leicht unterhalb des aktuellen an
+            arcade.draw_text(f"{self.achievement_stack}", cam_x, cam_y + 40, font_size=16, font_name="Kenney", anchor_x="center", anchor_y="center", color=arcade.color.GRAY) # Farbe optional
+
 
         if self.gewonnen:
             self.verbleibende_zeit_start = False
