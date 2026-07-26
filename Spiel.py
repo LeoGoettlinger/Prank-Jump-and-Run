@@ -72,9 +72,21 @@ class Plattformer(arcade.Window):
         self.level_3 = False
 
         self.start_menu = True
+        self.menu_screen = "welcome"
+        self.selected_preset = "2"
+        self._menu_hit_areas = []
+
+        self.custom_verbleibende_zeit_start = True
+        self.custom_verbleibende_zeit = 300.0
+        self.custom_verbleibende_zeit_show = True
+        self.custom_tränke = True
+        self.custom_lives = 4
+        self.custom_schaden_immun_timer = 3.0
+        self.custom_genutzte_zeit_show = True
+        self.custom_genutzte_zeit_use = True
 
         self.gamemode = "Normal"
-        self.freeze_player = False
+        self.freeze_player = True
 
         self.camera = arcade.camera.Camera2D()
 
@@ -206,82 +218,70 @@ class Plattformer(arcade.Window):
 #        print("Ich mag Züge!!!!!!!!(Wenn diese Nachricht angezeigt wird dann ist __init__ durchgelaufen)")
 
     def setup(self):
-        line = "===================================================="
-        print(line)
-        print("       IT'S A PRANK JUMP & RUN Beta 0.1 - Setup             ")
-        print(line)
-        print("Welcome to the Prank! Viel Spaß beim Hüpfen.")
-        print(f"Code & Design by: SampleCraft (Leo Göttlinger)")
-        print(line)
+        """Startet das grafische Setup-Menü statt Terminal-Eingaben."""
+        self.start_menu = True
+        self.freeze_player = True
+        self.menu_screen = "welcome"
+        self.selected_preset = "2"
 
-        # Steuerung
-        print("STEUERUNG:")
-        print("  Bewegung       : Pfeiltasten oder WASD")
-        print("  Springen/Aktion: Leertaste")
-        print("  Beenden (Quit) : Q")
-        print("  Reset/Neustart : R")
-        print("  Musik an/aus   : M")
-        print(line)
+    def _menu_bounds(self):
+        cam_x, cam_y = self.camera.position
+        return cam_x - self.width / 2, cam_x + self.width / 2, cam_y - self.height / 2, cam_y + self.height / 2
 
-        # Rechtliches
-        print("RECHTLICHES & COPYRIGHT:")
-        print("© 2025-2026 Leo Göttlinger (SampleCraft)")
-        print("Der Code und alle Assets sind mein Eigentum.")
-        print("Kopieren, Verändern oder Verbreiten ohne meine Erlaubnis ist nicht gestattet!")
-        print("Mehr Infos in der LICENSE-Datei!")
-        print(line)
-        print("Ideen oder Bugs gerne auf GitHub melden: https://github.com/LeoGoettlinger/Prank-Jump-and-Run/issues")
-        print(line)
+    def _menu_bool_text(self, value):
+        return "Ja" if value else "Nein"
 
-        # Bedingungen
-        check = input("Akzeptierst du die Bedingungen? (ja/nein): ").strip().lower()
-        if check != "ja":
-            print("Schade! Ohne Zustimmung kein Spiel.")
-            print("Das Programm wird geschlossen.")
-            print(line)
-            arcade.exit()
-            quit()
+    def _menu_preset_name(self, preset):
+        return {"1": "Easy", "2": "Normal", "3": "Hardcore", "4": "Custom"}.get(preset, "Normal")
 
-        print("Spiel wird geladen...")
-        print("Lade Map... Lade Sprites... Bereite Fallen vor...")
-        print("LOS GEHT'S!")
-        print(line)
+    def _menu_add_button(self, left, bottom, width, height, text, action, color=arcade.color.DARK_SLATE_BLUE):
+        right = left + width
+        top = bottom + height
+        arcade.draw_lrbt_rectangle_filled(left, right, bottom, top, color)
+        arcade.draw_text(
+            text,
+            (left + right) / 2,
+            (bottom + top) / 2,
+            arcade.color.WHITE,
+            14,
+            font_name="Kenney Pixel",
+            anchor_x="center",
+            anchor_y="center",
+        )
+        self._menu_hit_areas.append((left, right, bottom, top, action))
 
-        # ----- Hilfsfunktionen (müssen vor der Verwendung definiert sein) -----
-        def get_boolean_input(prompt, default_value):
-            user_input = input(f"{prompt} (True oder False, Standard: {default_value}): ").strip().lower()
-            if user_input == "true":
-                return True
-            elif user_input == "false":
-                return False
-            print(f"Ungültige Eingabe oder leer. Verwende Standardwert: {default_value}")
-            return default_value
+    def _menu_add_toggle(self, left, bottom, width, height, value, true_action, false_action):
+        half = width / 2
+        true_color = arcade.color.GOLD if value else arcade.color.DARK_SLATE_GRAY
+        false_color = arcade.color.GOLD if not value else arcade.color.DARK_SLATE_GRAY
+        self._menu_add_button(left, bottom, half - 2, height, "Ja", true_action, true_color)
+        self._menu_add_button(left + half + 2, bottom, half - 2, height, "Nein", false_action, false_color)
 
-        def get_numeric_input(prompt, default_value, type_converter=float):
-            user_input = input(f"{prompt} (Standard: {default_value}): ").strip()
-            if user_input:
-                try:
-                    return type_converter(user_input)
-                except ValueError:
-                    print(f"Ungültige Eingabe. Verwende Standardwert: {default_value}")
-                    return default_value
-            print(f"Leere Eingabe. Verwende Standardwert: {default_value}")
-            return default_value
+    def _menu_add_stepper(self, left, bottom, width, height, label, value_text, minus_action, plus_action):
+        button_width = 36
+        label_width = width - (button_width * 2) - 8
+        self._menu_add_button(left, bottom, button_width, height, "-", minus_action, arcade.color.DARK_SLATE_GRAY)
+        arcade.draw_lrbt_rectangle_filled(
+            left + button_width + 4,
+            left + button_width + 4 + label_width,
+            bottom,
+            bottom + height,
+            arcade.color.DARK_SLATE_BLUE,
+        )
+        arcade.draw_text(
+            f"{label}: {value_text}",
+            left + button_width + 4 + label_width / 2,
+            bottom + height / 2,
+            arcade.color.WHITE,
+            13,
+            font_name="Kenney Pixel",
+            anchor_x="center",
+            anchor_y="center",
+        )
+        self._menu_add_button(left + width - button_width, bottom, button_width, height, "+", plus_action, arcade.color.DARK_SLATE_GRAY)
 
-        print("")
-        print(line)
-        print("SETTINGS:")
-        print(line)
-
-        # ----- Preset-Auswahl -----
-        print("Wähle ein Schwierigkeits-Preset:")
-        print("  1 = Easy")
-        print("  2 = Normal")
-        print("  3 = Hardcore")
-        print("  4 = Custom (individuelle Einstellungen)")
-        preset = input("Deine Wahl (1-4): ").strip()
-
-        if preset == "1":          # Easy
+    def apply_preset_settings(self, preset):
+        if preset == "1":
             self.lives = 6
             self.verbleibende_zeit = 600.0
             self.tränke = True
@@ -289,8 +289,7 @@ class Plattformer(arcade.Window):
             self.verbleibende_zeit_show = True
             self.verbleibende_zeit_start = True
             self.genutzte_zeit_show = True
-            print("Preset 'Easy' geladen.")
-        elif preset == "2":        # Normal
+        elif preset == "2":
             self.lives = 4
             self.verbleibende_zeit = 300.0
             self.tränke = True
@@ -298,8 +297,7 @@ class Plattformer(arcade.Window):
             self.verbleibende_zeit_show = True
             self.verbleibende_zeit_start = True
             self.genutzte_zeit_show = True
-            print("Preset 'Normal' geladen.")
-        elif preset == "3":        # Hardcore
+        elif preset == "3":
             self.lives = 3
             self.verbleibende_zeit = 120.0
             self.tränke = False
@@ -307,34 +305,34 @@ class Plattformer(arcade.Window):
             self.verbleibende_zeit_show = True
             self.verbleibende_zeit_start = True
             self.genutzte_zeit_show = True
-            print("Preset 'Hardcore' geladen.")
-        elif preset == "4":        # Custom
-            print("Custom-Modus – du wirst nun alle Einstellungen selbst festlegen.")
-            self.verbleibende_zeit_start = get_boolean_input("Verbleibende Zeit verwenden?", True)
+        elif preset == "4":
+            self.verbleibende_zeit_start = self.custom_verbleibende_zeit_start
             if self.verbleibende_zeit_start:
-                self.verbleibende_zeit = get_numeric_input("Verbleibende Zeit eingeben (in Sekunden)", 300.0)
-                self.verbleibende_zeit_show = get_boolean_input("Verbleibende Zeit anzeigen?", True)
+                self.verbleibende_zeit = self.custom_verbleibende_zeit
+                self.verbleibende_zeit_show = self.custom_verbleibende_zeit_show
             else:
                 self.verbleibende_zeit_use = False
                 self.verbleibende_zeit_show = False
 
-            self.tränke = get_boolean_input("Tränke aktivieren?", True)
-            self.lives = get_numeric_input("Anzahl Start-Leben eingeben", 4, int)
-            self.schaden_immun_timer = get_numeric_input("Zeit der Schaden-Immunität nach einem Treffer (in Sekunden)", 3.0)
-            self.genutzte_zeit_show = get_boolean_input("Genutzte Zeit anzeigen?", True)
-            self.genutzte_zeit_use = get_boolean_input("Genutzte Zeit aktivieren?", True)
+            self.tränke = self.custom_tränke
+            self.lives = self.custom_lives
+            self.schaden_immun_timer = self.custom_schaden_immun_timer
+            self.genutzte_zeit_show = self.custom_genutzte_zeit_show
+            self.genutzte_zeit_use = self.custom_genutzte_zeit_use
         else:
-            print("Ungültige Eingabe – es wird das Preset 'Normal' verwendet.")
+            self.apply_preset_settings("2")
 
-        # Timer initialisieren (einheitlich für alle Modi)
+    def finalize_setup(self):
+        preset = self.selected_preset if self.selected_preset in {"1", "2", "3", "4"} else "2"
+        self.apply_preset_settings(preset)
+
         self.plus1herz_timer = -1.0
         self.plus2herzen_timer = -1.0
         self.zeit_multi_jump = 0.0
         self.zeit_jump_boost = 0.0
         self.genutzte_zeit = 0.0
-        self.verbleibende_zeit_use = self.verbleibende_zeit_start  # Timer nur aktivieren, wenn der Spieler dies gewählt hat
+        self.verbleibende_zeit_use = self.verbleibende_zeit_start
 
-        # === NEU: Einstellungen für den lautlosen Reset sichern ===
         self.initial_lives = self.lives
         self.initial_verbleibende_zeit = self.verbleibende_zeit
         self.initial_tränke = self.tränke
@@ -346,21 +344,375 @@ class Plattformer(arcade.Window):
         self.initial_genutzte_zeit_use = self.genutzte_zeit_use
 
         self.genutzte_zeit_use = self.genutzte_zeit_show
-
-        # Hintergrundmusik starten
+        self.gamemode = self._menu_preset_name(preset)
         self.hintergrundmusik_sound = arcade.play_sound(self.hintergrundmusik, loop=True)
+        self.start_menu = False
+        self.freeze_player = False
 
-        print("\nFERTIG! Das Spiel startet jetzt.")
-        print(line)
-        print("Funfact: Marcus hat das Game auf Hardcore mit 2 Leben und 79.3 Sekunden und auch einmal mit 1 Leben und 91.5 Sekunden noch übrig gewonnen. Schaffst du das auch? ;)")
-        print(line)
+    def _menu_handle_action(self, action):
+        if action == "welcome_next":
+            self.menu_screen = "terms"
+        elif action == "terms_accept":
+            self.menu_screen = "loading"
+        elif action == "terms_decline":
+            arcade.exit()
+            quit()
+        elif action == "loading_next":
+            self.menu_screen = "preset"
+        elif action == "preset_back":
+            self.menu_screen = "loading"
+        elif action == "preset_1":
+            self.selected_preset = "1"
+        elif action == "preset_2":
+            self.selected_preset = "2"
+        elif action == "preset_3":
+            self.selected_preset = "3"
+        elif action == "preset_4":
+            self.selected_preset = "4"
+        elif action == "preset_next":
+            if self.selected_preset == "4":
+                self.menu_screen = "custom"
+            else:
+                self.apply_preset_settings(self.selected_preset)
+                self.menu_screen = "ready"
+        elif action == "custom_back":
+            self.menu_screen = "preset"
+        elif action == "custom_next":
+            self.apply_preset_settings("4")
+            self.menu_screen = "ready"
+        elif action == "ready_back":
+            self.menu_screen = "custom" if self.selected_preset == "4" else "preset"
+        elif action == "ready_start":
+            self.finalize_setup()
+        elif action == "custom_time_on":
+            self.custom_verbleibende_zeit_start = True
+        elif action == "custom_time_off":
+            self.custom_verbleibende_zeit_start = False
+        elif action == "custom_time_show_on":
+            self.custom_verbleibende_zeit_show = True
+        elif action == "custom_time_show_off":
+            self.custom_verbleibende_zeit_show = False
+        elif action == "custom_tränke_on":
+            self.custom_tränke = True
+        elif action == "custom_tränke_off":
+            self.custom_tränke = False
+        elif action == "custom_used_show_on":
+            self.custom_genutzte_zeit_show = True
+        elif action == "custom_used_show_off":
+            self.custom_genutzte_zeit_show = False
+        elif action == "custom_used_on":
+            self.custom_genutzte_zeit_use = True
+        elif action == "custom_used_off":
+            self.custom_genutzte_zeit_use = False
+        elif action == "custom_lives_minus":
+            self.custom_lives = max(1, self.custom_lives - 1)
+        elif action == "custom_lives_plus":
+            self.custom_lives = min(20, self.custom_lives + 1)
+        elif action == "custom_time_minus":
+            self.custom_verbleibende_zeit = max(10.0, self.custom_verbleibende_zeit - 10.0)
+        elif action == "custom_time_plus":
+            self.custom_verbleibende_zeit = min(3600.0, self.custom_verbleibende_zeit + 10.0)
+        elif action == "custom_immun_minus":
+            self.custom_schaden_immun_timer = max(0.0, round(self.custom_schaden_immun_timer - 0.5, 1))
+        elif action == "custom_immun_plus":
+            self.custom_schaden_immun_timer = min(30.0, round(self.custom_schaden_immun_timer + 0.5, 1))
+
+    def _ensure_menu_camera(self):
+        self.camera.position = (self.width / 2, self.height / 2)
+
+    def _draw_setup_menu(self):
+        self._ensure_menu_camera()
+        left, right, bottom, top = self._menu_bounds()
+        self._menu_hit_areas = []
+
+        arcade.draw_lrbt_rectangle_filled(left, right, bottom, top, arcade.color.Color(10, 20, 45, 230))
+        center_x = (left + right) / 2
+        content_left = left + 40
+        content_right = right - 40
+        button_width = 180
+        button_height = 34
+
+        arcade.draw_text(
+            "IT'S A PRANK JUMP & RUN",
+            center_x,
+            top - 42,
+            arcade.color.GOLD,
+            28,
+            font_name="Kenney Blocks",
+            anchor_x="center",
+            anchor_y="center",
+        )
+        arcade.draw_text(
+            "Beta 0.1 - Setup",
+            center_x,
+            top - 72,
+            arcade.color.LIGHT_GRAY,
+            16,
+            font_name="Kenney Pixel",
+            anchor_x="center",
+            anchor_y="center",
+        )
+
+        if self.menu_screen == "welcome":
+            lines = [
+                "Welcome to the Prank! Viel Spaß beim Hüpfen.",
+                "Code & Design by: SampleCraft (Leo Göttlinger)",
+                "",
+                "STEUERUNG:",
+                "  Bewegung        : Pfeiltasten oder WASD",
+                "  Springen/Aktion : Leertaste",
+                "  Beenden (Quit)  : Q",
+                "  Reset/Neustart  : R",
+                "  Musik an/aus    : M",
+            ]
+            y = top - 110
+            for line in lines:
+                arcade.draw_text(line, content_left, y, arcade.color.WHITE, 14, font_name="Kenney Pixel")
+                y -= 22
+            self._menu_add_button(
+                center_x - button_width / 2,
+                bottom + 28,
+                button_width,
+                button_height,
+                "Weiter",
+                "welcome_next",
+                arcade.color.SEA_GREEN,
+            )
+
+        elif self.menu_screen == "terms":
+            lines = [
+                "RECHTLICHES & COPYRIGHT:",
+                "© 2025-2026 Leo Göttlinger (SampleCraft)",
+                "Der Code ist mein Eigentum.",
+                "Kopieren, Verändern oder Verbreiten ohne meine Erlaubnis ist nicht gestattet!",
+                "Mehr Infos in der LICENSE-Datei!",
+                "",
+                "Ideen oder Bugs gerne auf GitHub melden:",
+                "github.com/LeoGoettlinger/Prank-Jump-and-Run/issues",
+                "",
+                "Akzeptierst du die Bedingungen?",
+            ]
+            y = top - 110
+            for line in lines:
+                arcade.draw_text(line, content_left, y, arcade.color.WHITE, 13, font_name="Kenney Pixel")
+                y -= 20
+            self._menu_add_button(
+                center_x - button_width - 10,
+                bottom + 28,
+                button_width,
+                button_height,
+                "Ja, akzeptieren",
+                "terms_accept",
+                arcade.color.SEA_GREEN,
+            )
+            self._menu_add_button(
+                center_x + 10,
+                bottom + 28,
+                button_width,
+                button_height,
+                "Nein, beenden",
+                "terms_decline",
+                arcade.color.DARK_RED,
+            )
+
+        elif self.menu_screen == "loading":
+            lines = [
+                "Spiel wird geladen...",
+                "Lade Map... Lade Sprites... Bereite Fallen vor...",
+                "LOS GEHT'S!",
+            ]
+            y = top - 140
+            for line in lines:
+                arcade.draw_text(line, center_x, y, arcade.color.WHITE, 16, font_name="Kenney Pixel", anchor_x="center")
+                y -= 30
+            self._menu_add_button(
+                center_x - button_width / 2,
+                bottom + 28,
+                button_width,
+                button_height,
+                "Weiter zu Settings",
+                "loading_next",
+                arcade.color.SEA_GREEN,
+            )
+
+        elif self.menu_screen == "preset":
+            arcade.draw_text("SETTINGS", center_x, top - 100, arcade.color.GOLD, 20, font_name="Kenney Blocks", anchor_x="center")
+            arcade.draw_text(
+                "Wähle ein Schwierigkeits-Preset:",
+                center_x,
+                top - 130,
+                arcade.color.WHITE,
+                14,
+                font_name="Kenney Pixel",
+                anchor_x="center",
+            )
+
+            presets = [
+                ("1", "Easy", "6 Leben | 600s | Tränke an | 2s Immunität"),
+                ("2", "Normal", "4 Leben | 300s | Tränke an | 3s Immunität"),
+                ("3", "Hardcore", "3 Leben | 120s | keine Tränke | keine Immunität"),
+                ("4", "Custom", "Alle Einstellungen selbst festlegen"),
+            ]
+            y = top - 165
+            for preset_id, title, description in presets:
+                color = arcade.color.GOLD if self.selected_preset == preset_id else arcade.color.DARK_SLATE_BLUE
+                self._menu_add_button(content_left, y, content_right - content_left, 42, f"{preset_id}. {title}", f"preset_{preset_id}", color)
+                arcade.draw_text(description, content_left + 12, y - 16, arcade.color.LIGHT_GRAY, 12, font_name="Kenney Pixel")
+                y -= 72
+
+            self._menu_add_button(content_left, bottom + 28, button_width, button_height, "Zurück", "preset_back")
+            self._menu_add_button(content_right - button_width, bottom + 28, button_width, button_height, "Weiter", "preset_next", arcade.color.SEA_GREEN)
+
+        elif self.menu_screen == "custom":
+            arcade.draw_text("CUSTOM-EINSTELLUNGEN", center_x, top - 100, arcade.color.GOLD, 20, font_name="Kenney Blocks", anchor_x="center")
+            y = top - 135
+            row_height = 30
+            row_gap = 38
+            row_width = content_right - content_left
+
+            arcade.draw_text("Verbleibende Zeit verwenden?", content_left, y + 8, arcade.color.WHITE, 13, font_name="Kenney Pixel")
+            self._menu_add_toggle(content_right - 120, y - 8, 120, row_height, self.custom_verbleibende_zeit_start, "custom_time_on", "custom_time_off")
+            y -= row_gap
+
+            if self.custom_verbleibende_zeit_start:
+                self._menu_add_stepper(
+                    content_left,
+                    y - 8,
+                    row_width,
+                    row_height,
+                    "Verbleibende Zeit (Sek.)",
+                    f"{self.custom_verbleibende_zeit:.0f}",
+                    "custom_time_minus",
+                    "custom_time_plus",
+                )
+                y -= row_gap
+                arcade.draw_text("Verbleibende Zeit anzeigen?", content_left, y + 8, arcade.color.WHITE, 13, font_name="Kenney Pixel")
+                self._menu_add_toggle(content_right - 120, y - 8, 120, row_height, self.custom_verbleibende_zeit_show, "custom_time_show_on", "custom_time_show_off")
+                y -= row_gap
+
+            arcade.draw_text("Tränke aktivieren?", content_left, y + 8, arcade.color.WHITE, 13, font_name="Kenney Pixel")
+            self._menu_add_toggle(content_right - 120, y - 8, 120, row_height, self.custom_tränke, "custom_tränke_on", "custom_tränke_off")
+            y -= row_gap
+
+            self._menu_add_stepper(
+                content_left,
+                y - 8,
+                row_width,
+                row_height,
+                "Start-Leben",
+                str(self.custom_lives),
+                "custom_lives_minus",
+                "custom_lives_plus",
+            )
+            y -= row_gap
+
+            self._menu_add_stepper(
+                content_left,
+                y - 8,
+                row_width,
+                row_height,
+                "Schaden-Immunität (Sek.)",
+                f"{self.custom_schaden_immun_timer:.1f}",
+                "custom_immun_minus",
+                "custom_immun_plus",
+            )
+            y -= row_gap
+
+            arcade.draw_text("Genutzte Zeit anzeigen?", content_left, y + 8, arcade.color.WHITE, 13, font_name="Kenney Pixel")
+            self._menu_add_toggle(content_right - 120, y - 8, 120, row_height, self.custom_genutzte_zeit_show, "custom_used_show_on", "custom_used_show_off")
+            y -= row_gap
+
+            arcade.draw_text("Genutzte Zeit aktivieren?", content_left, y + 8, arcade.color.WHITE, 13, font_name="Kenney Pixel")
+            self._menu_add_toggle(content_right - 120, y - 8, 120, row_height, self.custom_genutzte_zeit_use, "custom_used_on", "custom_used_off")
+
+            self._menu_add_button(content_left, bottom + 28, button_width, button_height, "Zurück", "custom_back")
+            self._menu_add_button(content_right - button_width, bottom + 28, button_width, button_height, "Weiter", "custom_next", arcade.color.SEA_GREEN)
+
+        elif self.menu_screen == "ready":
+            preset_name = self._menu_preset_name(self.selected_preset)
+            arcade.draw_text("FERTIG!", center_x, top - 100, arcade.color.GOLD, 24, font_name="Kenney Blocks", anchor_x="center")
+            arcade.draw_text(f"Preset: {preset_name}", center_x, top - 135, arcade.color.WHITE, 16, font_name="Kenney Pixel", anchor_x="center")
+
+            summary = [
+                f"Leben: {self.lives}",
+                f"Verbleibende Zeit: {self._menu_bool_text(self.verbleibende_zeit_start)} ({self.verbleibende_zeit:.0f}s)" if self.verbleibende_zeit_start else "Verbleibende Zeit: Aus",
+                f"Zeit-Anzeige: {self._menu_bool_text(self.verbleibende_zeit_show)}",
+                f"Tränke: {self._menu_bool_text(self.tränke)}",
+                f"Schaden-Immunität: {self.schaden_immun_timer:.1f}s",
+                f"Genutzte Zeit anzeigen: {self._menu_bool_text(self.genutzte_zeit_show)}",
+                f"Genutzte Zeit aktivieren: {self._menu_bool_text(self.genutzte_zeit_use)}",
+            ]
+            y = top - 170
+            for line in summary:
+                arcade.draw_text(line, center_x, y, arcade.color.LIGHT_GRAY, 14, font_name="Kenney Pixel", anchor_x="center")
+                y -= 22
+
+            funfact = "Funfact: Marcus hat Hardcore mit 2 Leben/79.3s und 1 Leben/91.5s gewonnen. Schaffst du das auch? ;)"
+            arcade.draw_text(funfact, center_x, bottom + 95, arcade.color.AQUA, 12, font_name="Kenney Pixel", anchor_x="center", width=700, multiline=True)
+
+            self._menu_add_button(content_left, bottom + 28, button_width, button_height, "Zurück", "ready_back")
+            self._menu_add_button(
+                content_right - button_width,
+                bottom + 28,
+                button_width,
+                button_height,
+                "Spiel starten!",
+                "ready_start",
+                arcade.color.SEA_GREEN,
+            )
+
+    def _handle_setup_menu_key(self, symbol):
+        if self.menu_screen == "welcome" and symbol in (arcade.key.ENTER, arcade.key.RETURN, arcade.key.SPACE):
+            self._menu_handle_action("welcome_next")
+        elif self.menu_screen == "terms":
+            if symbol in (arcade.key.Y, arcade.key.J):
+                self._menu_handle_action("terms_accept")
+            elif symbol in (arcade.key.N, arcade.key.ESCAPE):
+                self._menu_handle_action("terms_decline")
+        elif self.menu_screen == "loading" and symbol in (arcade.key.ENTER, arcade.key.RETURN, arcade.key.SPACE):
+            self._menu_handle_action("loading_next")
+        elif self.menu_screen == "preset":
+            if symbol == arcade.key.KEY_1:
+                self._menu_handle_action("preset_1")
+            elif symbol == arcade.key.KEY_2:
+                self._menu_handle_action("preset_2")
+            elif symbol == arcade.key.KEY_3:
+                self._menu_handle_action("preset_3")
+            elif symbol == arcade.key.KEY_4:
+                self._menu_handle_action("preset_4")
+            elif symbol in (arcade.key.ENTER, arcade.key.RETURN):
+                self._menu_handle_action("preset_next")
+            elif symbol == arcade.key.ESCAPE:
+                self._menu_handle_action("preset_back")
+        elif self.menu_screen in ("custom", "ready"):
+            if symbol in (arcade.key.ENTER, arcade.key.RETURN):
+                self._menu_handle_action("custom_next" if self.menu_screen == "custom" else "ready_start")
+            elif symbol == arcade.key.ESCAPE:
+                self._menu_handle_action("custom_back" if self.menu_screen == "custom" else "ready_back")
+
+    def on_mouse_press(self, x, y, button, modifiers):
+        if not self.start_menu or button != arcade.MOUSE_BUTTON_LEFT:
+            return
+
+        self._ensure_menu_camera()
+
+        for left, right, bottom, top, action in self._menu_hit_areas:
+            if left <= x <= right and bottom <= y <= top:
+                self._menu_handle_action(action)
+                return
 
     def on_key_press(self, symbol, modifiers):
         if symbol == arcade.key.Q:
             arcade.exit()
-        elif symbol == arcade.key.R:
+            return
+
+        if self.start_menu:
+            self._handle_setup_menu_key(symbol)
+            return
+
+        if symbol == arcade.key.R:
             self.reset = True
-        elif self.interact == True:
+        elif self.interact == True and not self.freeze_player:
 #            if self.start_menu:
 #                if symbol == arcade.key.KEY_1:
 #                    self.gamemode = "Einfach"
@@ -424,6 +776,9 @@ class Plattformer(arcade.Window):
             return wert
 
     def on_update(self, delta_time):
+
+        if self.start_menu:
+            return
 
         if self.erstes_update:
             self.erstes_update = False
@@ -759,7 +1114,7 @@ class Plattformer(arcade.Window):
         self.jump_boost = False
         self.schaden_immun = False
         self.schaden_immun_anzeigen = False
-        self.start_menu = True
+        self.start_menu = False
         self.freeze_player = False
         self.springen_höhe = 0.65
         self.achievement_timer_new = 0.0
@@ -869,6 +1224,9 @@ class Plattformer(arcade.Window):
             # Zeige das Achievement im Stack leicht unterhalb des aktuellen an
             arcade.draw_text(f"{self.achievement_stack}", cam_x - 10, cam_y + 40, font_size=24, font_name="Kenney Pixel", anchor_x="center", anchor_y="center", color=arcade.color.AQUAMARINE) # Farbe optional
 
+        if self.start_menu:
+            self._draw_setup_menu()
+            return
 
         if self.gewonnen:
             self.verbleibende_zeit_start = False
