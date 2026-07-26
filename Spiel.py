@@ -197,6 +197,9 @@ class Plattformer(arcade.Window):
 
         self.genutzte_zeit_use = True
 
+        arcade.load_font(":resources:fonts/ttf/Kenney/Kenney_Pixel.ttf")
+        arcade.load_font(":resources:fonts/ttf/Kenney/Kenney_Blocks.ttf")
+
         self.setup()
 
 #        self.ich_habe_keine_ahnung = print("Ich habe keine Ahnung!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
@@ -349,7 +352,7 @@ class Plattformer(arcade.Window):
 
         print("\nFERTIG! Das Spiel startet jetzt.")
         print(line)
-        print("Funfact: Marcus hat das Game auf Hardcore mit 2 Leben und 72.8 Sekunden noch übrig gewonnen. Schaffst du das auch? ;)")
+        print("Funfact: Marcus hat das Game auf Hardcore mit 2 Leben und 79.3 Sekunden und auch einmal mit 1 Leben und 91.5 Sekunden noch übrig gewonnen. Schaffst du das auch? ;)")
         print(line)
 
     def on_key_press(self, symbol, modifiers):
@@ -837,34 +840,34 @@ class Plattformer(arcade.Window):
         self.szene.draw()
         self.spielerliste.draw()
 
-        arcade.draw_text(f"Münzen: {round(self.münzen, 1)}", cam_x + 385, cam_y - 285, font_size=18, font_name="Kenney", anchor_x="right")
-        arcade.draw_text(f"Leben: {round(self.lives, 1)}", cam_x - 288, cam_y + 270, font_size=18, font_name="Kenney", anchor_x="right")
-        arcade.draw_text(f"Schätze: {round(self.schätze, 1)}", cam_x - 273, cam_y - 285, font_size=18, font_name="Kenney", anchor_x="right")
+        arcade.draw_text(f"Münzen: {round(self.münzen, 1)}", cam_x + 385, cam_y - 285, font_size=24, font_name="Kenney Pixel", anchor_x="right")
+        arcade.draw_text(f"Leben: {round(self.lives, 1)}", cam_x - 307, cam_y + 270, font_size=24, font_name="Kenney Pixel", anchor_x="right")
+        arcade.draw_text(f"Schätze: {round(self.schätze, 1)}", cam_x - 282, cam_y - 285, font_size=24, font_name="Kenney Pixel", anchor_x="right")
 
         if self.schaden_immun_anzeigen:
-            arcade.draw_text(f"Du kriegst noch für: {round(self.schaden_immun_timer, 1)} keinen Schaden!", cam_x + 230, cam_y - 225, font_size=18, font_name="Kenney", anchor_x="right")
+            arcade.draw_text(f"Du kriegst noch für: {round(self.schaden_immun_timer, 1)} keinen Schaden!", cam_x + 225, cam_y - 225, font_size=24, font_name="Kenney Pixel", anchor_x="right")
         if self.höher_springen:
-            arcade.draw_text(f"Du hast noch für {round(self.zeit_jump_boost, 1)} Sekunden Jump Boost!", cam_x + 250, cam_y - 250, font_size=18, font_name="Kenney", anchor_x="right")
+            arcade.draw_text(f"Du hast noch für {round(self.zeit_jump_boost, 1)} Sekunden Jump Boost!", cam_x + 245, cam_y - 250, font_size=24, font_name="Kenney Pixel", anchor_x="right")
         if self.multi_jump:
-            arcade.draw_text(f"Du hast noch für {round(self.zeit_multi_jump, 1)} Sekunden Multi Jump!", cam_x + 250, cam_y - 260, font_size=18, font_name="Kenney", anchor_x="right")
+            arcade.draw_text(f"Du hast noch für {round(self.zeit_multi_jump, 1)} Sekunden Multi Jump!", cam_x + 245, cam_y - 260, font_size=24, font_name="Kenney Pixel", anchor_x="right")
         if self.plus1herz:
-            arcade.draw_text(f"+1 Herz", cam_x + 45, cam_y - 200, font_size=18, font_name="Kenney", anchor_x="right")
+            arcade.draw_text(f"+1 Herz", cam_x + 35, cam_y - 200, font_size=24, font_name="Kenney Pixel", anchor_x="right")
         if self.plus2herzen:
-            arcade.draw_text(f"+2 Herzen", cam_x + 45, cam_y - 210, font_size=18, font_name="Kenney", anchor_x="right")
+            arcade.draw_text(f"+2 Herzen", cam_x + 35, cam_y - 210, font_size=24, font_name="Kenney Pixel", anchor_x="right")
         if self.verbleibende_zeit_show:
-            arcade.draw_text(f"Verbleibende Zeit: {round(self.verbleibende_zeit, 1)} Sekunden", cam_x + 385, cam_y + 265, font_size=18, font_name="Kenney", anchor_x="right")
+            arcade.draw_text(f"Verbleibende Zeit: {round(self.verbleibende_zeit, 1)} Sekunden", cam_x + 385, cam_y + 265, font_size=24, font_name="Kenney Pixel", anchor_x="right")
         if self.genutzte_zeit_show:
-            arcade.draw_text(f"Genutzte Zeit: {round(self.genutzte_zeit, 1)} Sekunden", cam_x + 385, cam_y + 245, font_size=18, font_name="Kenney", anchor_x="right")
+            arcade.draw_text(f"Genutzte Zeit: {round(self.genutzte_zeit, 1)} Sekunden", cam_x + 385, cam_y + 245, font_size=24, font_name="Kenney Pixel", anchor_x="right")
         # Achievement anzeigen (das Haupt-Achievement)
         if self.achievement_displayed and self.achievement is not None:
             # Zeichne das aktuell angezeigte Achievement
-            arcade.draw_text(f"{self.achievement}", cam_x, cam_y + 60, font_size=18, font_name="Kenney", anchor_x="center", anchor_y="center")
+            arcade.draw_text(f"{self.achievement}", cam_x - 10, cam_y + 70, font_size=24, font_name="Kenney Pixel", anchor_x="center", anchor_y="center", color=arcade.color.AQUA) # Farbe optional
 
         # Achievement aus dem Stack anzeigen (z.B. darunter), wenn es existiert
         # Korrektur: Prüfe auf None, nicht auf True
         if self.achievement_stack is not None:
             # Zeige das Achievement im Stack leicht unterhalb des aktuellen an
-            arcade.draw_text(f"{self.achievement_stack}", cam_x, cam_y + 40, font_size=16, font_name="Kenney", anchor_x="center", anchor_y="center", color=arcade.color.GRAY) # Farbe optional
+            arcade.draw_text(f"{self.achievement_stack}", cam_x - 10, cam_y + 40, font_size=24, font_name="Kenney Pixel", anchor_x="center", anchor_y="center", color=arcade.color.AQUAMARINE) # Farbe optional
 
 
         if self.gewonnen:
@@ -875,15 +878,15 @@ class Plattformer(arcade.Window):
             arcade.draw_lrbt_rectangle_filled(cam_x - 400, cam_x + 400, cam_y - 300, cam_y + 300, arcade.color.GREEN)
             arcade.draw_text("GEWONNEN", cam_x, cam_y, arcade.color.WHITE, 50, font_name="Kenney Blocks", anchor_x="center", anchor_y="center")
             arcade.draw_text("Klicke R um das Spiel erneut zu starten", cam_x - 125, cam_y - 70, arcade.color.WHITE)
-            arcade.draw_text(f"Münzen: {round(self.münzen, 1)}", cam_x + 385, cam_y - 285, font_size=18, font_name="Kenney", anchor_x="right")
-            arcade.draw_text(f"Leben: {round(self.lives, 1)}", cam_x - 288, cam_y + 270, font_size=18, font_name="Kenney", anchor_x="right")
-            arcade.draw_text(f"Schätze: {round(self.schätze, 1)}", cam_x - 273, cam_y - 285, font_size=18, font_name="Kenney", anchor_x="right")
+            arcade.draw_text(f"Münzen: {round(self.münzen, 1)}", cam_x + 385, cam_y - 285, font_size=24, font_name="Kenney Pixel", anchor_x="right")
+            arcade.draw_text(f"Leben: {round(self.lives, 1)}", cam_x - 307, cam_y + 270, font_size=24, font_name="Kenney Pixel", anchor_x="right")
+            arcade.draw_text(f"Schätze: {round(self.schätze, 1)}", cam_x - 282, cam_y - 285, font_size=24, font_name="Kenney Pixel", anchor_x="right")
             if self.verbleibende_zeit_use == True:
-                arcade.draw_text(f"Verbleibende Zeit: {round(self.verbleibende_zeit, 1)} Sekunden", cam_x + 385, cam_y + 265, font_size=18, font_name="Kenney", anchor_x="right")
+                arcade.draw_text(f"Verbleibende Zeit: {round(self.verbleibende_zeit, 1)} Sekunden", cam_x + 385, cam_y + 265, font_size=24, font_name="Kenney Pixel", anchor_x="right")
             if self.genutzte_zeit_use == True:
                 self.genutzte_zeit_use = False  # Verhindert, dass die Zeit weiterläuft, nachdem das Spiel gewonnen wurde
             if self.genutzte_zeit_show == True:
-                arcade.draw_text(f"Genutzte Zeit: {round(self.genutzte_zeit, 1)} Sekunden", cam_x + 385, cam_y + 245, font_size=18, font_name="Kenney", anchor_x="right")
+                arcade.draw_text(f"Genutzte Zeit: {round(self.genutzte_zeit, 1)} Sekunden", cam_x + 385, cam_y + 245, font_size=24, font_name="Kenney Pixel", anchor_x="right")
 
         if self.verloren:
             self.interact = False
@@ -895,15 +898,15 @@ class Plattformer(arcade.Window):
             arcade.draw_lrbt_rectangle_filled(cam_x - 400, cam_x + 400, cam_y - 300, cam_y + 300, arcade.color.RED)
             arcade.draw_text("VERLOREN", cam_x, cam_y, arcade.color.WHITE, 50, font_name="Kenney Blocks", anchor_x="center", anchor_y="center")
             arcade.draw_text("Klicke R um das Spiel erneut zu starten", cam_x - 125, cam_y - 70, arcade.color.WHITE)
-            arcade.draw_text(f"Münzen: {round(self.münzen, 1)}", cam_x + 385, cam_y - 285, font_size=18, font_name="Kenney", anchor_x="right")
-            arcade.draw_text(f"Leben: {round(self.lives, 1)}", cam_x - 288, cam_y + 270, font_size=18, font_name="Kenney", anchor_x="right")
-            arcade.draw_text(f"Schätze: {round(self.schätze, 1)}", cam_x - 273, cam_y - 285, font_size=18, font_name="Kenney", anchor_x="right")
+            arcade.draw_text(f"Münzen: {round(self.münzen, 1)}", cam_x + 385, cam_y - 285, font_size=24, font_name="Kenney Pixel", anchor_x="right")
+            arcade.draw_text(f"Leben: {round(self.lives, 1)}", cam_x - 307, cam_y + 270, font_size=24, font_name="Kenney Pixel", anchor_x="right")
+            arcade.draw_text(f"Schätze: {round(self.schätze, 1)}", cam_x - 282, cam_y - 285, font_size=24, font_name="Kenney Pixel", anchor_x="right")
             if self.verbleibende_zeit_use == True:
-                arcade.draw_text(f"Verbleibende Zeit: {round(self.verbleibende_zeit, 1)} Sekunden", cam_x + 385, cam_y + 265, font_size=18, font_name="Kenney", anchor_x="right")
+                arcade.draw_text(f"Verbleibende Zeit: {round(self.verbleibende_zeit, 1)} Sekunden", cam_x + 385, cam_y + 265, font_size=24, font_name="Kenney Pixel", anchor_x="right")
             if self.genutzte_zeit_use == True:
                 self.genutzte_zeit_use = False  # Verhindert, dass die Zeit weiterläuft, nachdem das Spiel verloren wurde
             if self.genutzte_zeit_show == True:
-                arcade.draw_text(f"Genutzte Zeit: {round(self.genutzte_zeit, 1)} Sekunden", cam_x + 385, cam_y + 245, font_size=18, font_name="Kenney", anchor_x="right")
+                arcade.draw_text(f"Genutzte Zeit: {round(self.genutzte_zeit, 1)} Sekunden", cam_x + 385, cam_y + 245, font_size=24, font_name="Kenney Pixel", anchor_x="right")
 
 Plattformer()
 arcade.run()
