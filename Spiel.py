@@ -349,7 +349,7 @@ class Plattformer(arcade.Window):
 
         print("\nFERTIG! Das Spiel startet jetzt.")
         print(line)
-        print("Funfact: Marcus hat das Game auf Hardcore mit 1 Leben und 60.4 Sekunden noch übrig gewonnen. Schaffst du das auch? ;)")
+        print("Funfact: Marcus hat das Game auf Hardcore mit 2 Leben und 72.8 Sekunden noch übrig gewonnen. Schaffst du das auch? ;)")
         print(line)
 
     def on_key_press(self, symbol, modifiers):
@@ -882,6 +882,7 @@ class Plattformer(arcade.Window):
                 arcade.draw_text(f"Verbleibende Zeit: {round(self.verbleibende_zeit, 1)} Sekunden", cam_x + 385, cam_y + 265, font_size=18, font_name="Kenney", anchor_x="right")
             if self.genutzte_zeit_use == True:
                 self.genutzte_zeit_use = False  # Verhindert, dass die Zeit weiterläuft, nachdem das Spiel gewonnen wurde
+            if self.genutzte_zeit_show == True:
                 arcade.draw_text(f"Genutzte Zeit: {round(self.genutzte_zeit, 1)} Sekunden", cam_x + 385, cam_y + 245, font_size=18, font_name="Kenney", anchor_x="right")
 
         if self.verloren:
@@ -901,6 +902,7 @@ class Plattformer(arcade.Window):
                 arcade.draw_text(f"Verbleibende Zeit: {round(self.verbleibende_zeit, 1)} Sekunden", cam_x + 385, cam_y + 265, font_size=18, font_name="Kenney", anchor_x="right")
             if self.genutzte_zeit_use == True:
                 self.genutzte_zeit_use = False  # Verhindert, dass die Zeit weiterläuft, nachdem das Spiel verloren wurde
+            if self.genutzte_zeit_show == True:
                 arcade.draw_text(f"Genutzte Zeit: {round(self.genutzte_zeit, 1)} Sekunden", cam_x + 385, cam_y + 245, font_size=18, font_name="Kenney", anchor_x="right")
 
 Plattformer()
