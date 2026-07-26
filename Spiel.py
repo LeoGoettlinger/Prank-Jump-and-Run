@@ -483,7 +483,7 @@ class Plattformer(arcade.Window):
             lines = [
                 "RECHTLICHES & COPYRIGHT:",
                 "© 2025-2026 Leo Göttlinger (SampleCraft)",
-                "Der Code ist mein Eigentum.",
+                "Der gesamte Code inklusive der Map(die Zusammenstellung der Tiles) ist mein Eigentum!",
                 "Kopieren, Verändern oder Verbreiten ohne meine Erlaubnis ist nicht gestattet!",
                 "Mehr Infos in der LICENSE-Datei!",
                 "",
