@@ -81,6 +81,12 @@ Hast du einen Fehler gefunden oder eine coole Idee für ein neues Level, neue Hi
 
 ---
 
+## LICENSE
+
+**Dieses Spiel ist mit der Apache 2 Lizenz gesichert!**
+
+---
+
 ## 👨‍💻 Entwickler
 
 Code & Design by: **SampleCraft (Leo Göttlinger)**
