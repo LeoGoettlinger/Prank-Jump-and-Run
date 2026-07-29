@@ -956,7 +956,7 @@ class Plattformer(arcade.Window):
                 self.gewonnen_sound_gespielt = True
             self.gewonnen = True
 
-        if self.verloren == False:
+        if self.verloren == False and self.gewonnen == False:
             self.schaden_immun_timer -= delta_time 
             self.genutzte_zeit += delta_time
             # Use boolean logic (no bitwise &). verbleibende_zeit_start is a float timestamp here.
@@ -1229,8 +1229,8 @@ class Plattformer(arcade.Window):
             return
 
         if self.gewonnen:
-            self.verbleibende_zeit_start = False
             self.interact = False
+            self.verbleibende_zeit_start = False
             if self.hintergrundmusik_sound and self.hintergrundmusik_sound.playing:
                 arcade.stop_sound(self.hintergrundmusik_sound)
             arcade.draw_lrbt_rectangle_filled(cam_x - 400, cam_x + 400, cam_y - 300, cam_y + 300, arcade.color.GREEN)
