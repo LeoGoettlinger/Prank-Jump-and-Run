@@ -483,14 +483,13 @@ class Plattformer(arcade.Window):
             lines = [
                 "RECHTLICHES & COPYRIGHT:",
                 "© 2025-2026 Leo Göttlinger (SampleCraft)",
-                "Der gesamte Code inklusive der Map(die Zusammenstellung der Tiles) ist mein Eigentum!",
-                "Kopieren, Verändern oder Verbreiten ohne meine Erlaubnis ist nicht gestattet!",
+                "Das Game ist unter der Apache 2 Lizenz lizensiert!",
                 "Mehr Infos in der LICENSE-Datei!",
                 "",
                 "Ideen oder Bugs gerne auf GitHub melden:",
                 "github.com/LeoGoettlinger/Prank-Jump-and-Run/issues",
                 "",
-                "Akzeptierst du die Bedingungen?",
+                "Akzeptierst du die Bedingungen der Lizenz?",
             ]
             y = top - 110
             for line in lines:
