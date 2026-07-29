@@ -4,7 +4,7 @@ Ein actionreiches 2D Jump & Run Spiel, entwickelt mit Python und der Arcade-Bibl
 
 ## 🚀 Features
 
-- **Interaktives Terminal-Setup:** Bevor das eigentliche Spiel startet, kannst du in der Konsole Parameter wie Start-Leben, Zeitlimits und Unverwundbarkeits-Dauer anpassen.
+- **Interaktives Setup/Settings:** Bevor das eigentliche Spiel startet, kannst du nach dem Start in einer grafischen UI Parameter wie Start-Leben, Zeitlimits und Unverwundbarkeits-Dauer anpassen.
 - **Power-Ups & Tränke:** - Multi-Jump-Tränke (erlaubt Doppelsprünge für eine bestimmte Zeit)
   - Jump-Boost-Tränke (höhere Sprungkraft)
   - Lebens-Tränke (+1 oder +2 Herzen)
@@ -14,7 +14,11 @@ Ein actionreiches 2D Jump & Run Spiel, entwickelt mit Python und der Arcade-Bibl
   - Nutze Teleporter und Röhren, um über die Map zu reisen.
 - **Gefahren:** Weiche Stacheln aus. Wirst du getroffen, verlierst du ein Leben, erhältst aber kurzzeitig Schaden-Immunität.
 - **Dynamische Musik:** Die Hintergrundmusik ändert sich, sobald du Level 3 erreichst (Epic Music!).
-- **Settings:** Diese werden bei jedem Start/Restart aufegerufen. Dort kannst du viele Einstellungen machen!
+- **Sounds:** Es gibt Sounds für alles!
+- **Achievements:** Es gibt auch viele verschiedene Achievements.
+- **Custom Schriftarten:** Wir haben eine Custom Schrift.
+- **Presets:** Es gibt Presets für einen Start!
+- **Hardcore Preset:** Es gibt einen Hardcore Preset, perfekt fürs Speedrunnen!
 - **Verbleibende Zeit:** Challenge deine Freunde: Wer schaft es schneller durchzuspielen?
 
 ---
