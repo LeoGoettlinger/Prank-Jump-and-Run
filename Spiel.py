@@ -4,8 +4,20 @@ pyglet.options["osx_alt_loop"] = True
 import arcade, random
 import yaml
 import os
+import shutil
+import sys
 import uuid
 from cryptography.fernet import Fernet
+
+
+def _asset_path(filename):
+    if getattr(sys, "frozen", False):
+        base = sys._MEIPASS
+        candidate = os.path.join(base, filename)
+        if os.path.exists(candidate):
+            return candidate
+    return os.path.join(os.path.dirname(__file__), filename)
+
 
 class Plattformer(arcade.Window):
     def __init__(self):
@@ -13,7 +25,7 @@ class Plattformer(arcade.Window):
 
         arcade.set_background_color(arcade.color.AIR_FORCE_BLUE)
 
-        self.tile_map = arcade.load_tilemap("Jump And Run.tmx", use_spatial_hash=True)
+        self.tile_map = arcade.load_tilemap(_asset_path("Jump And Run.tmx"), use_spatial_hash=True)
 
         self.szene = arcade.Scene.from_tilemap(self.tile_map)
 
@@ -22,56 +34,53 @@ class Plattformer(arcade.Window):
         #Hintergrund.center_y = 10
         self.spielerliste = arcade.SpriteList()
 
-        self.spielfigur = arcade.Sprite("creeper.png", 0.04)
+        self.spielfigur = arcade.Sprite(_asset_path("creeper.png"), 0.04)
         self.spielfigur.center_x = 20
         self.spielfigur.center_y = 308
         self.szene.add_sprite("Spielfigur", self.spielfigur)
         self.spielerliste.append(self.spielfigur)
 
-        self.audio_shutdown = arcade.load_sound("Windows-XP-Shutdown.wav")
+        self.audio_shutdown = arcade.load_sound(_asset_path("Windows-XP-Shutdown.wav"))
        # self.shutdownsound = arcade.play_sound(self.audio_shutdown, looping=True)
         self.shutdownsound = None
 
-        self.audio_error = arcade.load_sound("Windows-XP-Error.wav")
+        self.audio_error = arcade.load_sound(_asset_path("Windows-XP-Error.wav"))
         self.errorsound = None
 
-        self.verloren_sound = arcade.load_sound("Verlorensound.wav")
+        self.verloren_sound = arcade.load_sound(_asset_path("Verlorensound.wav"))
         self.verloren_sound_player = None
 
-        self.audio_hacked = arcade.load_sound("You-are-hacked.wav")
+        self.audio_hacked = arcade.load_sound(_asset_path("You-are-hacked.wav"))
         self.hackedsound = None
 
-        self.audio_nebenrisiken = arcade.load_sound("zu-nebenrisiken-und-wirkungen.wav")
+        self.audio_nebenrisiken = arcade.load_sound(_asset_path("zu-nebenrisiken-und-wirkungen.wav"))
         self.nebenrisikensound = None
-        self.epic_music = arcade.load_sound("epic_music.mp3")
+        self.epic_music = arcade.load_sound(_asset_path("epic_music.mp3"))
         self.epic_music_sound = None
 
-        self.button_click_sound = arcade.load_sound("button-klick.mp3")
+        self.button_click_sound = arcade.load_sound(_asset_path("button-klick.mp3"))
 
-        self.hintergrundmusik = arcade.load_sound("hintergrundmusik.wav")
+        self.hintergrundmusik = arcade.load_sound(_asset_path("hintergrundmusik.wav"))
         self.hintergrundmusik_sound = None # arcade.play_sound(self.hintergrundmusik, loop=True)
-
-        self.epic_music = arcade.load_sound("epic_music.mp3")
-        self.epic_music_sound = None # arcade.play_sound(self.epic_music, loop=True)
         # arcade.stop_sound(self.epic_music_sound)
 
-        self.advancement_sound = arcade.load_sound("achievement.mp3")
+        self.advancement_sound = arcade.load_sound(_asset_path("achievement.mp3"))
         self.advancement_player = None# arcade.play_sound(self.advancement_sound)
         # arcade.stop_sound(self.advancement_player)
 
-        self.coin_sound = arcade.load_sound("coin_collect.mp3")
+        self.coin_sound = arcade.load_sound(_asset_path("coin_collect.mp3"))
         self.coin_player = None # arcade.play_sound(self.coin_sound)
         # arcade.stop_sound(self.coin_player)
 
-        self.trank_sound = arcade.load_sound("trank.mp3")
+        self.trank_sound = arcade.load_sound(_asset_path("trank.mp3"))
         self.trank_player = None # arcade.play_sound(self.trank_sound)
         # arcade.stop_sound(self.trank_player)
 
-        self.item_sound = arcade.load_sound("item-collect.mp3")
+        self.item_sound = arcade.load_sound(_asset_path("item-collect.mp3"))
         self.item_player = None # arcade.play_sound(self.item_sound)
         # arcade.stop_sound(self.item_player)
 
-        self.damage_sound = arcade.load_sound("damage.mp3")
+        self.damage_sound = arcade.load_sound(_asset_path("damage.mp3"))
         self.damage_player = None # arcade.play_sound(self.damage_sound)
         # arcade.stop_sound(self.damage_player)
 
@@ -220,9 +229,12 @@ class Plattformer(arcade.Window):
         arcade.load_font(":resources:fonts/ttf/Kenney/Kenney_Pixel.ttf")
         arcade.load_font(":resources:fonts/ttf/Kenney/Kenney_Blocks.ttf")
 
-        self.save_file = "saves.yml"
-        self.key_file = ".secret.key"
-        self.machine_id_file = ".machine_id"
+        self.save_dir = self._get_user_data_dir()
+        self.save_file = os.path.join(self.save_dir, "saves.yml")
+        self.key_file = os.path.join(self.save_dir, ".secret.key")
+        self.machine_id_file = os.path.join(self.save_dir, ".machine_id")
+        self._ensure_user_data_dir()
+        self._migrate_legacy_user_files()
         self.cipher = self._init_crypto()
         self._init_machine_id()
         self.save_data_full = self._load_saves()
@@ -250,7 +262,36 @@ class Plattformer(arcade.Window):
 
         self.setup()
 
+    def _get_user_data_dir(self):
+        if os.name == "nt":
+            appdata = os.environ.get("APPDATA")
+            if appdata:
+                return os.path.join(appdata, "PrankJumpAndRun")
+            return os.path.expanduser(r"~\AppData\Roaming\PrankJumpAndRun")
+        if sys.platform == "darwin":
+            return os.path.expanduser("~/Library/Application Support/PrankJumpAndRun")
+        return os.path.expanduser("~/.local/share/prank-jump-and-run")
+
+    def _ensure_user_data_dir(self):
+        os.makedirs(self.save_dir, exist_ok=True)
+
+    def _migrate_legacy_user_files(self):
+        legacy_targets = [
+            ("save_file", "saves.yml"),
+            ("key_file", ".secret.key"),
+            ("machine_id_file", ".machine_id"),
+        ]
+        for attr_name, filename in legacy_targets:
+            legacy_path = os.path.join(os.getcwd(), filename)
+            target_path = getattr(self, attr_name)
+            if os.path.exists(legacy_path) and not os.path.exists(target_path):
+                try:
+                    shutil.copy2(legacy_path, target_path)
+                except Exception:
+                    continue
+
     def _init_machine_id(self):
+        self._ensure_user_data_dir()
         if not os.path.exists(self.machine_id_file):
             new_id = str(uuid.uuid4())
             with open(self.machine_id_file, "w") as f:
@@ -261,6 +302,7 @@ class Plattformer(arcade.Window):
                 self.machine_id = f.read().strip()
 
     def _init_crypto(self):
+        self._ensure_user_data_dir()
         if not os.path.exists(self.key_file):
             key = Fernet.generate_key()
             with open(self.key_file, "wb") as f:
@@ -1446,7 +1488,7 @@ class Plattformer(arcade.Window):
         self.camera.position = (self.width / 2, self.height / 2)
 
         # 6. Die Map komplett neu von der Festplatte laden, damit alle gelöschten Objekte wieder da sind!
-        self.tile_map = arcade.load_tilemap("Jump And Run.tmx", use_spatial_hash=True) # <-- DIESE ZEILE HIER ERGÄNZEN
+        self.tile_map = arcade.load_tilemap(_asset_path("Jump And Run.tmx"), use_spatial_hash=True) # <-- DIESE ZEILE HIER ERGÄNZEN
         self.szene = arcade.Scene.from_tilemap(self.tile_map)
 
         # 7. Spielerfigur zurücksetzen und der neuen Szene hinzufügen

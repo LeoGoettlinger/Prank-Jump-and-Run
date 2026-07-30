@@ -1,0 +1,27 @@
+# === Build artifacts ===
+dist/
+build/
+*.spec
+
+# === Python cache ===
+__pycache__/
+*.pyc
+*.pyo
+*.pyc
+
+# === Sensitive save data (NIE hochladen!) ===
+.secret.key
+.machine_id
+saves.yml
+
+# === OS specific files ===
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# === IDE / Editor ===
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

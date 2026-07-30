@@ -17,15 +17,20 @@ elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
     PYTHON_CMD="python3"
 fi
 
-# 2. REPOSITORY KLONEN
-if [ ! -d "Prank-Jump-and-Run/.git" ]; then
-    rm -rf Prank-Jump-and-Run
-    git clone -b main https://github.com/LeoGoettlinger/Prank-Jump-and-Run.git
-else
-    cd Prank-Jump-and-Run && git pull origin main && cd ..
-fi
+# 2. REPOSITORY AUS GITHUB HOLEN / AKTUALISIEREN
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_URL="https://github.com/LeoGoettlinger/Prank-Jump-and-Run.git"
+cd "$PROJECT_DIR" || exit
 
-cd Prank-Jump-and-Run || exit
+if [ -d ".git" ]; then
+    echo "[INFO] Repository gefunden. Aktualisiere auf die neueste Version..."
+    git fetch origin main
+    git reset --hard origin/main
+else
+    echo "[INFO] Kein lokales Repository gefunden. Klone Repository aus GitHub..."
+    rm -rf "$PROJECT_DIR"/* "$PROJECT_DIR"/.git* 2>/dev/null
+    git clone -b main "$REPO_URL" "$PROJECT_DIR"
+fi
 
 # 3. UMGEBUNG & INSTALLATION
 $PYTHON_CMD -m venv venv
@@ -33,7 +38,7 @@ source venv/bin/activate
 
 echo "[INFO] Update Pip & Installation..."
 python3 -m pip install --upgrade pip
-python3 -m pip install "arcade>=3.0.0" "pyglet>=2.0.0" "pyyaml>=6.0.0" "cryptography>=41.0.0"
+python3 -m pip install -r requirements.txt
 
 # 4. START
 python3 Spiel.py

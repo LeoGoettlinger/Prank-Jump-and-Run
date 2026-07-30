@@ -24,20 +24,25 @@ if %errorlevel% neq 0 (
     exit
 )
 
-:: 3. REPOSITORY KLONEN
-if not exist "Prank-Jump-and-Run\.git" (
-    echo [INFO] Klone Repository neu...
-    rmdir /s /q "Prank-Jump-and-Run" 2>nul
-    git clone -b main https://github.com/LeoGoettlinger/Prank-Jump-and-Run.git
+:: 3. REPOSITORY AUS GITHUB HOLEN / AKTUALISIEREN
+set "PROJECT_DIR=%~dp0"
+set "REPO_URL=https://github.com/LeoGoettlinger/Prank-Jump-and-Run.git"
+cd /d "%PROJECT_DIR%"
+
+if exist ".git" (
+    echo [INFO] Repository gefunden. Aktualisiere auf die neueste Version...
+    git fetch origin main
+    git reset --hard origin/main
 ) else (
-    echo [INFO] Suche nach Updates...
-    cd Prank-Jump-and-Run
-    git pull origin main
-    cd ..
+    echo [INFO] Kein lokales Repository gefunden. Klone Repository aus GitHub...
+    if exist "Spiel.py" (
+        echo [WARN] Spielordner vorhanden, aber kein Git-Repository. Bitte den Ordner löschen oder als neues Repo initialisieren.
+    )
+    rmdir /s /q "%PROJECT_DIR%" 2>nul
+    git clone -b main "%REPO_URL%" "%PROJECT_DIR%"
 )
 
 :: 4. VIRTUELLE UMGEBUNG & INSTALLATION
-cd Prank-Jump-and-Run
 python -m venv venv
 call venv\Scripts\activate
 
@@ -45,11 +50,7 @@ echo [INFO] Update Pip...
 python -m pip install --upgrade pip
 
 echo [INFO] Installiere Bibliotheken (Flexible Versionen)...
-:: Wir nutzen >= für bessere Kompatibilität
-python -m pip install "arcade>=3.0.0"
-python -m pip install "pyglet>=2.0.0"
-python -m pip install "pyyaml>=6.0.0"
-python -m pip install "cryptography>=41.0.0"
+python -m pip install -r requirements.txt
 
 :: 5. START
 echo.
