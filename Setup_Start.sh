@@ -33,7 +33,7 @@ source venv/bin/activate
 
 echo "[INFO] Update Pip & Installation..."
 python3 -m pip install --upgrade pip
-python3 -m pip install "arcade>=3.0.0" "pyglet>=2.0.0"
+python3 -m pip install "arcade>=3.0.0" "pyglet>=2.0.0" "pyyaml>=6.0.0" "cryptography>=41.0.0"
 
 # 4. START
 python3 Spiel.py

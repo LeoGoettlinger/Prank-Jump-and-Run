@@ -48,6 +48,8 @@ echo [INFO] Installiere Bibliotheken (Flexible Versionen)...
 :: Wir nutzen >= für bessere Kompatibilität
 python -m pip install "arcade>=3.0.0"
 python -m pip install "pyglet>=2.0.0"
+python -m pip install "pyyaml>=6.0.0"
+python -m pip install "cryptography>=41.0.0"
 
 :: 5. START
 echo.

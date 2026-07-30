@@ -2,10 +2,14 @@ import pyglet
 pyglet.options["osx_alt_loop"] = True
 
 import arcade, random
+import yaml
+import os
+import uuid
+from cryptography.fernet import Fernet
 
 class Plattformer(arcade.Window):
     def __init__(self):
-        super().__init__(800, 600, "Its a Prank! Jump and Run")
+        super().__init__(800, 600, "Its a Prank! Jump and Run v1")
 
         arcade.set_background_color(arcade.color.AIR_FORCE_BLUE)
 
@@ -34,11 +38,15 @@ class Plattformer(arcade.Window):
         self.verloren_sound = arcade.load_sound("Verlorensound.wav")
         self.verloren_sound_player = None
 
-        self.audio_hacked = arcade.load_sound("You-are-hacked_.wav")
+        self.audio_hacked = arcade.load_sound("You-are-hacked.wav")
         self.hackedsound = None
 
         self.audio_nebenrisiken = arcade.load_sound("zu-nebenrisiken-und-wirkungen.wav")
-        self.nebenrisiken_sound = None
+        self.nebenrisikensound = None
+        self.epic_music = arcade.load_sound("epic_music.mp3")
+        self.epic_music_sound = None
+
+        self.button_click_sound = arcade.load_sound("button-klick.mp3")
 
         self.hintergrundmusik = arcade.load_sound("hintergrundmusik.wav")
         self.hintergrundmusik_sound = None # arcade.play_sound(self.hintergrundmusik, loop=True)
@@ -212,7 +220,141 @@ class Plattformer(arcade.Window):
         arcade.load_font(":resources:fonts/ttf/Kenney/Kenney_Pixel.ttf")
         arcade.load_font(":resources:fonts/ttf/Kenney/Kenney_Blocks.ttf")
 
+        self.save_file = "saves.yml"
+        self.key_file = ".secret.key"
+        self.machine_id_file = ".machine_id"
+        self.cipher = self._init_crypto()
+        self._init_machine_id()
+        self.save_data_full = self._load_saves()
+        if self.machine_id not in self.save_data_full:
+            self.save_data_full[self.machine_id] = {"accepted_terms": False, "highscores": []}
+        self.save_data = self.save_data_full[self.machine_id]
+        
+        self.accepted_terms = self.save_data.get("accepted_terms", False)
+
+        self.paused = False
+        self.pause_menu_screen = "main"
+        self.sound_enabled = True
+        self._current_music_mode = "pause"
+        self.tutorial_scroll_offset = 0
+        self._is_grounded = True
+        self._air_jumps_left = 0
+        self._arcade_play_sound = arcade.play_sound
+
+        def _sound_gate(sound, *args, **kwargs):
+            if not self.sound_enabled:
+                return None
+            return self._arcade_play_sound(sound, *args, **kwargs)
+
+        arcade.play_sound = _sound_gate
+
         self.setup()
+
+    def _init_machine_id(self):
+        if not os.path.exists(self.machine_id_file):
+            new_id = str(uuid.uuid4())
+            with open(self.machine_id_file, "w") as f:
+                f.write(new_id)
+            self.machine_id = new_id
+        else:
+            with open(self.machine_id_file, "r") as f:
+                self.machine_id = f.read().strip()
+
+    def _init_crypto(self):
+        if not os.path.exists(self.key_file):
+            key = Fernet.generate_key()
+            with open(self.key_file, "wb") as f:
+                f.write(key)
+        else:
+            with open(self.key_file, "rb") as f:
+                key = f.read()
+        return Fernet(key)
+
+    def _load_saves(self):
+        if not os.path.exists(self.save_file):
+            return {}
+        try:
+            with open(self.save_file, "rb") as f:
+                encrypted_data = f.read()
+            decrypted_data = self.cipher.decrypt(encrypted_data)
+            data = yaml.safe_load(decrypted_data)
+            return data if data else {}
+        except Exception:
+            return {}
+
+    def _write_saves(self):
+        data_str = yaml.dump(self.save_data_full).encode("utf-8")
+        encrypted_data = self.cipher.encrypt(data_str)
+        with open(self.save_file, "wb") as f:
+            f.write(encrypted_data)
+
+    def _play_sound(self, sound, *args, **kwargs):
+        if not self.sound_enabled:
+            return None
+        return self._arcade_play_sound(sound, *args, **kwargs)
+
+    def _stop_sound(self, attr_name):
+        sound = getattr(self, attr_name, None)
+        if sound and getattr(sound, "playing", False):
+            arcade.stop_sound(sound)
+        setattr(self, attr_name, None)
+
+    def _stop_all_sounds(self):
+        for attr_name in [
+            "epic_music_sound",
+            "hintergrundmusik_sound",
+            "verloren_sound_player",
+            "shutdownsound",
+            "errorsound",
+            "hackedsound",
+            "nebenrisikensound",
+            "advancement_player",
+            "coin_player",
+            "trank_player",
+            "item_player",
+            "damage_player",
+        ]:
+            self._stop_sound(attr_name)
+
+    def _set_music_mode(self, mode):
+        if getattr(self, "_current_music_mode", None) == mode and self.sound_enabled:
+            if mode == "pause" and self.epic_music_sound and self.epic_music_sound.playing:
+                return
+            if mode == "gameplay" and self.hintergrundmusik_sound and self.hintergrundmusik_sound.playing:
+                return
+
+        self._stop_sound("epic_music_sound")
+        self._stop_sound("hintergrundmusik_sound")
+
+        if not self.sound_enabled:
+            self._current_music_mode = mode
+            return
+
+        if mode == "pause":
+            self.epic_music_sound = self._play_sound(self.epic_music, loop=True)
+        else:
+            self.hintergrundmusik_sound = self._play_sound(self.hintergrundmusik, loop=True)
+
+        self._current_music_mode = mode
+
+    def _play_background_music(self):
+        self._set_music_mode("gameplay")
+
+    def _play_pause_menu_music(self):
+        self._set_music_mode("pause")
+
+    def _play_menu_music(self):
+        self._set_music_mode("pause")
+
+    def _toggle_sound(self):
+        self.sound_enabled = not self.sound_enabled
+        if not self.sound_enabled:
+            self._stop_all_sounds()
+        else:
+            if self.start_menu or self.paused or self.gewonnen or self.verloren:
+                self._play_pause_menu_music()
+            else:
+                self._play_background_music()
 
 #        self.ich_habe_keine_ahnung = print("Ich habe keine Ahnung!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 #        print("Ich mag Züge!!!!!!!!(Wenn diese Nachricht angezeigt wird dann ist __init__ durchgelaufen)")
@@ -221,8 +363,11 @@ class Plattformer(arcade.Window):
         """Startet das grafische Setup-Menü statt Terminal-Eingaben."""
         self.start_menu = True
         self.freeze_player = True
-        self.menu_screen = "welcome"
+        self.menu_screen = "main_menu" if self.accepted_terms else "terms"
         self.selected_preset = "2"
+        self.paused = False
+        self.pause_menu_screen = "main"
+        self._play_menu_music()
 
     def _menu_bounds(self):
         cam_x, cam_y = self.camera.position
@@ -243,7 +388,7 @@ class Plattformer(arcade.Window):
             (left + right) / 2,
             (bottom + top) / 2,
             arcade.color.WHITE,
-            14,
+            19,
             font_name="Kenney Pixel",
             anchor_x="center",
             anchor_y="center",
@@ -273,7 +418,7 @@ class Plattformer(arcade.Window):
             left + button_width + 4 + label_width / 2,
             bottom + height / 2,
             arcade.color.WHITE,
-            13,
+            18,
             font_name="Kenney Pixel",
             anchor_x="center",
             anchor_y="center",
@@ -326,6 +471,8 @@ class Plattformer(arcade.Window):
         preset = self.selected_preset if self.selected_preset in {"1", "2", "3", "4"} else "2"
         self.apply_preset_settings(preset)
 
+        self._play_background_music()
+
         self.plus1herz_timer = -1.0
         self.plus2herzen_timer = -1.0
         self.zeit_multi_jump = 0.0
@@ -345,41 +492,94 @@ class Plattformer(arcade.Window):
 
         self.genutzte_zeit_use = self.genutzte_zeit_show
         self.gamemode = self._menu_preset_name(preset)
-        self.hintergrundmusik_sound = arcade.play_sound(self.hintergrundmusik, loop=True)
+        self._set_music_mode("gameplay")
         self.start_menu = False
         self.freeze_player = False
 
     def _menu_handle_action(self, action):
-        if action == "welcome_next":
-            self.menu_screen = "terms"
-        elif action == "terms_accept":
-            self.menu_screen = "loading"
-        elif action == "terms_decline":
-            arcade.exit()
-            quit()
-        elif action == "loading_next":
+        self._play_sound(self.button_click_sound)
+        if action == "main_menu_new_game":
+            if not self.accepted_terms:
+                self.menu_screen = "terms"
+            else:
+                self.menu_screen = "preset"
+        elif action == "main_menu_highscores":
+            self.menu_screen = "highscores"
+        elif action == "main_menu_tutorial":
+            self.tutorial_scroll_offset = 0
+            self.menu_screen = "tutorial"
+        elif action == "main_menu_quit":
+            self._exit_game()
+        elif action == "highscores_back":
+            if self.paused:
+                self.pause_menu_screen = "main"
+            else:
+                self.menu_screen = "main_menu"
+        elif action == "tutorial_back":
+            if self.paused:
+                self.pause_menu_screen = "main"
+            else:
+                self.menu_screen = "main_menu"
+        elif action == "pause_resume":
+            self.paused = False
+            self._play_background_music()
+        elif action == "pause_highscores":
+            self.pause_menu_screen = "highscores"
+        elif action == "pause_tutorial":
+            self.tutorial_scroll_offset = 0
+            self.pause_menu_screen = "tutorial"
+        elif action == "pause_reset":
+            self.paused = False
+            self.reset = True
+        elif action == "pause_new_game":
+            self.paused = False
+            self.setup()
             self.menu_screen = "preset"
+        elif action == "pause_main_menu":
+            self.paused = False
+            self.gewonnen = False
+            self.verloren = False
+            self.setup()
+        elif action == "end_quit":
+            self._exit_game()
+        elif action == "end_main_menu":
+            self.gewonnen = False
+            self.verloren = False
+            self.setup()
+        elif action == "end_new_game":
+            self.gewonnen = False
+            self.verloren = False
+            self.reset = True
+        elif action == "terms_accept":
+            self.accepted_terms = True
+            self.save_data["accepted_terms"] = True
+            self._write_saves()
+            self.menu_screen = "preset"
+        elif action == "terms_decline":
+            self._exit_game()
         elif action == "preset_back":
-            self.menu_screen = "loading"
+            self.menu_screen = "main_menu"
         elif action == "preset_1":
             self.selected_preset = "1"
+            self._menu_handle_action("ready_start")
         elif action == "preset_2":
             self.selected_preset = "2"
+            self._menu_handle_action("ready_start")
         elif action == "preset_3":
             self.selected_preset = "3"
+            self._menu_handle_action("ready_start")
         elif action == "preset_4":
             self.selected_preset = "4"
+            self.menu_screen = "custom"
         elif action == "preset_next":
             if self.selected_preset == "4":
                 self.menu_screen = "custom"
             else:
-                self.apply_preset_settings(self.selected_preset)
-                self.menu_screen = "ready"
+                self._menu_handle_action("ready_start")
         elif action == "custom_back":
             self.menu_screen = "preset"
         elif action == "custom_next":
-            self.apply_preset_settings("4")
-            self.menu_screen = "ready"
+            self._menu_handle_action("ready_start")
         elif action == "ready_back":
             self.menu_screen = "custom" if self.selected_preset == "4" else "preset"
         elif action == "ready_start":
@@ -417,8 +617,61 @@ class Plattformer(arcade.Window):
         elif action == "custom_immun_plus":
             self.custom_schaden_immun_timer = min(30.0, round(self.custom_schaden_immun_timer + 0.5, 1))
 
+    def _exit_game(self):
+        try:
+            self.close()
+        except Exception:
+            pass
+        try:
+            arcade.exit()
+        except SystemExit:
+            pass
+
     def _ensure_menu_camera(self):
         self.camera.position = (self.width / 2, self.height / 2)
+
+    def _screen_to_world(self, x, y):
+        cam_x, cam_y = self.camera.position
+        return x + (cam_x - self.width / 2), y + (cam_y - self.height / 2)
+
+    def _draw_tutorial_screen(self, center_x, top, content_left, button_width, button_height, back_action):
+        self._draw_tutorial_content(center_x, top, content_left, 28, button_width, button_height, back_action)
+
+    def _draw_tutorial_content(self, center_x, top, content_left, bottom, button_width, button_height, back_action):
+        arcade.draw_text("TUTORIAL & STEUERUNG", center_x, top - 100, arcade.color.GOLD, 28, font_name="Kenney Blocks", anchor_x="center")
+        lines = [
+            "ZIEL: Erreiche das grüne Ziel am Ende des Levels!",
+            "",
+            "ITEMS & TRÄNKE:",
+            "  Münzen    : Sammle so viele wie möglich!",
+            "  Schätze   : Wertvolle Truhen bringen Extra-Punkte.",
+            "  +1/+2 Herz: Heilt dich um 1 oder 2 Leben.",
+            "  Multi-Jump: Erlaubt kurzzeitig einen zusätzlichen Sprung.",
+            "  Jump-Boost: Springe höher für 13 Sekunden.",
+            "",
+            "GEFAHREN & LEVEL:",
+            "  Stacheln & Fallen: Kosten dich ein Leben!",
+            "  Schlüssel  : Öffne Türen und den Schatzraum.",
+            "  3 Level    : Finde die Keys um weiterzukommen.",
+            "",
+            "STEUERUNG:",
+            "  Bewegen: Pfeiltasten / WASD  |  Springen: Leertaste",
+            "  Pause: P / ESC  |  Reset: R  |  Musik: M",
+            "",
+            "Funfact: Marcus hat Hardcore mit 2 Leben/79.3s",
+            "und 1 Leben/91.5s gewonnen. Schaffst du das? ;)",
+        ]
+        max_visible = 14
+        total_lines = len(lines)
+        start_index = max(0, min(self.tutorial_scroll_offset, max(0, total_lines - max_visible)))
+        visible_lines = lines[start_index:start_index + max_visible]
+        y = top - 135
+        for line in visible_lines:
+            arcade.draw_text(line, content_left, y, arcade.color.WHITE, 20, font_name="Kenney Pixel")
+            y -= 24
+        if total_lines > max_visible:
+            arcade.draw_text("↑/↓ für mehr", center_x, bottom + 72, arcade.color.LIGHT_GRAY, 16, font_name="Kenney Pixel", anchor_x="center")
+        self._menu_add_button(center_x - button_width / 2, bottom + 28, button_width, button_height, "Zurück", back_action, arcade.color.SEA_GREEN)
 
     def _draw_setup_menu(self):
         self._ensure_menu_camera()
@@ -437,47 +690,31 @@ class Plattformer(arcade.Window):
             center_x,
             top - 42,
             arcade.color.GOLD,
-            28,
+            34,
             font_name="Kenney Blocks",
             anchor_x="center",
             anchor_y="center",
         )
-        arcade.draw_text(
-            "Beta 0.1 - Setup",
-            center_x,
-            top - 72,
-            arcade.color.LIGHT_GRAY,
-            16,
-            font_name="Kenney Pixel",
-            anchor_x="center",
-            anchor_y="center",
-        )
+        if self.menu_screen == "main_menu":
+            self._menu_add_button(center_x - button_width / 2, top - 180, button_width, button_height, "Neues Spiel Starten", "main_menu_new_game", arcade.color.SEA_GREEN)
+            self._menu_add_button(center_x - button_width / 2, top - 230, button_width, button_height, "Highscores", "main_menu_highscores", arcade.color.DARK_SLATE_BLUE)
+            self._menu_add_button(center_x - button_width / 2, top - 280, button_width, button_height, "Tutorial", "main_menu_tutorial", arcade.color.DARK_SLATE_BLUE)
+            self._menu_add_button(center_x - button_width / 2, top - 330, button_width, button_height, "Spiel verlassen", "main_menu_quit", arcade.color.DARK_RED)
 
-        if self.menu_screen == "welcome":
-            lines = [
-                "Welcome to the Prank! Viel Spaß beim Hüpfen.",
-                "Code & Design by: SampleCraft (Leo Göttlinger)",
-                "",
-                "STEUERUNG:",
-                "  Bewegung        : Pfeiltasten oder WASD",
-                "  Springen/Aktion : Leertaste",
-                "  Beenden (Quit)  : Q",
-                "  Reset/Neustart  : R",
-                "  Musik an/aus    : M",
-            ]
-            y = top - 110
-            for line in lines:
-                arcade.draw_text(line, content_left, y, arcade.color.WHITE, 14, font_name="Kenney Pixel")
-                y -= 22
-            self._menu_add_button(
-                center_x - button_width / 2,
-                bottom + 28,
-                button_width,
-                button_height,
-                "Weiter",
-                "welcome_next",
-                arcade.color.SEA_GREEN,
-            )
+        elif self.menu_screen == "highscores":
+            arcade.draw_text("HIGHSCORES", center_x, top - 110, arcade.color.GOLD, 28, font_name="Kenney Blocks", anchor_x="center")
+            y = top - 150
+            if not self.save_data.get("highscores"):
+                arcade.draw_text("Noch keine Highscores vorhanden.", center_x, y, arcade.color.WHITE, 22, font_name="Kenney Pixel", anchor_x="center")
+            else:
+                for score in self.save_data["highscores"][:5]:
+                    text = f"Münzen: {score.get('münzen', 0)} | Schätze: {score.get('schätze', 0)} | Leben: {score.get('lives', 0)} | Zeit: {score.get('time', 0):.1f}s"
+                    arcade.draw_text(text, center_x, y, arcade.color.WHITE, 22, font_name="Kenney Pixel", anchor_x="center")
+                    y -= 34
+            self._menu_add_button(center_x - button_width / 2, bottom + 28, button_width, button_height, "Zurück", "highscores_back", arcade.color.SEA_GREEN)
+
+        elif self.menu_screen == "tutorial":
+            self._draw_tutorial_screen(center_x, top, content_left, button_width, button_height, "tutorial_back")
 
         elif self.menu_screen == "terms":
             lines = [
@@ -493,8 +730,8 @@ class Plattformer(arcade.Window):
             ]
             y = top - 110
             for line in lines:
-                arcade.draw_text(line, content_left, y, arcade.color.WHITE, 13, font_name="Kenney Pixel")
-                y -= 20
+                arcade.draw_text(line, content_left, y, arcade.color.WHITE, 18, font_name="Kenney Pixel")
+                y -= 25
             self._menu_add_button(
                 center_x - button_width - 10,
                 bottom + 28,
@@ -514,34 +751,14 @@ class Plattformer(arcade.Window):
                 arcade.color.DARK_RED,
             )
 
-        elif self.menu_screen == "loading":
-            lines = [
-                "Spiel wird geladen...",
-                "Lade Map... Lade Sprites... Bereite Fallen vor...",
-                "LOS GEHT'S!",
-            ]
-            y = top - 140
-            for line in lines:
-                arcade.draw_text(line, center_x, y, arcade.color.WHITE, 16, font_name="Kenney Pixel", anchor_x="center")
-                y -= 30
-            self._menu_add_button(
-                center_x - button_width / 2,
-                bottom + 28,
-                button_width,
-                button_height,
-                "Weiter zu Settings",
-                "loading_next",
-                arcade.color.SEA_GREEN,
-            )
-
         elif self.menu_screen == "preset":
-            arcade.draw_text("SETTINGS", center_x, top - 100, arcade.color.GOLD, 20, font_name="Kenney Blocks", anchor_x="center")
+            arcade.draw_text("SETTINGS", center_x, top - 110, arcade.color.GOLD, 26, font_name="Kenney Blocks", anchor_x="center")
             arcade.draw_text(
                 "Wähle ein Schwierigkeits-Preset:",
                 center_x,
-                top - 130,
+                top - 140,
                 arcade.color.WHITE,
-                14,
+                19,
                 font_name="Kenney Pixel",
                 anchor_x="center",
             )
@@ -552,24 +769,24 @@ class Plattformer(arcade.Window):
                 ("3", "Hardcore", "3 Leben | 120s | keine Tränke | keine Immunität"),
                 ("4", "Custom", "Alle Einstellungen selbst festlegen"),
             ]
-            y = top - 165
+            y = top - 190
             for preset_id, title, description in presets:
                 color = arcade.color.GOLD if self.selected_preset == preset_id else arcade.color.DARK_SLATE_BLUE
                 self._menu_add_button(content_left, y, content_right - content_left, 42, f"{preset_id}. {title}", f"preset_{preset_id}", color)
-                arcade.draw_text(description, content_left + 12, y - 16, arcade.color.LIGHT_GRAY, 12, font_name="Kenney Pixel")
+                arcade.draw_text(description, content_left + 12, y - 16, arcade.color.LIGHT_GRAY, 17, font_name="Kenney Pixel")
                 y -= 72
 
             self._menu_add_button(content_left, bottom + 28, button_width, button_height, "Zurück", "preset_back")
             self._menu_add_button(content_right - button_width, bottom + 28, button_width, button_height, "Weiter", "preset_next", arcade.color.SEA_GREEN)
 
         elif self.menu_screen == "custom":
-            arcade.draw_text("CUSTOM-EINSTELLUNGEN", center_x, top - 100, arcade.color.GOLD, 20, font_name="Kenney Blocks", anchor_x="center")
+            arcade.draw_text("CUSTOM-EINSTELLUNGEN", center_x, top - 100, arcade.color.GOLD, 26, font_name="Kenney Blocks", anchor_x="center")
             y = top - 135
             row_height = 30
             row_gap = 38
             row_width = content_right - content_left
 
-            arcade.draw_text("Verbleibende Zeit verwenden?", content_left, y + 8, arcade.color.WHITE, 13, font_name="Kenney Pixel")
+            arcade.draw_text("Verbleibende Zeit verwenden?", content_left, y + 8, arcade.color.WHITE, 18, font_name="Kenney Pixel")
             self._menu_add_toggle(content_right - 120, y - 8, 120, row_height, self.custom_verbleibende_zeit_start, "custom_time_on", "custom_time_off")
             y -= row_gap
 
@@ -585,11 +802,11 @@ class Plattformer(arcade.Window):
                     "custom_time_plus",
                 )
                 y -= row_gap
-                arcade.draw_text("Verbleibende Zeit anzeigen?", content_left, y + 8, arcade.color.WHITE, 13, font_name="Kenney Pixel")
+                arcade.draw_text("Verbleibende Zeit anzeigen?", content_left, y + 8, arcade.color.WHITE, 18, font_name="Kenney Pixel")
                 self._menu_add_toggle(content_right - 120, y - 8, 120, row_height, self.custom_verbleibende_zeit_show, "custom_time_show_on", "custom_time_show_off")
                 y -= row_gap
 
-            arcade.draw_text("Tränke aktivieren?", content_left, y + 8, arcade.color.WHITE, 13, font_name="Kenney Pixel")
+            arcade.draw_text("Tränke aktivieren?", content_left, y + 8, arcade.color.WHITE, 18, font_name="Kenney Pixel")
             self._menu_add_toggle(content_right - 120, y - 8, 120, row_height, self.custom_tränke, "custom_tränke_on", "custom_tränke_off")
             y -= row_gap
 
@@ -617,59 +834,76 @@ class Plattformer(arcade.Window):
             )
             y -= row_gap
 
-            arcade.draw_text("Genutzte Zeit anzeigen?", content_left, y + 8, arcade.color.WHITE, 13, font_name="Kenney Pixel")
+            arcade.draw_text("Genutzte Zeit anzeigen?", content_left, y + 8, arcade.color.WHITE, 18, font_name="Kenney Pixel")
             self._menu_add_toggle(content_right - 120, y - 8, 120, row_height, self.custom_genutzte_zeit_show, "custom_used_show_on", "custom_used_show_off")
             y -= row_gap
 
-            arcade.draw_text("Genutzte Zeit aktivieren?", content_left, y + 8, arcade.color.WHITE, 13, font_name="Kenney Pixel")
+            arcade.draw_text("Genutzte Zeit aktivieren?", content_left, y + 8, arcade.color.WHITE, 18, font_name="Kenney Pixel")
             self._menu_add_toggle(content_right - 120, y - 8, 120, row_height, self.custom_genutzte_zeit_use, "custom_used_on", "custom_used_off")
 
             self._menu_add_button(content_left, bottom + 28, button_width, button_height, "Zurück", "custom_back")
             self._menu_add_button(content_right - button_width, bottom + 28, button_width, button_height, "Weiter", "custom_next", arcade.color.SEA_GREEN)
 
-        elif self.menu_screen == "ready":
-            preset_name = self._menu_preset_name(self.selected_preset)
-            arcade.draw_text("FERTIG!", center_x, top - 100, arcade.color.GOLD, 24, font_name="Kenney Blocks", anchor_x="center")
-            arcade.draw_text(f"Preset: {preset_name}", center_x, top - 135, arcade.color.WHITE, 16, font_name="Kenney Pixel", anchor_x="center")
+    def _draw_pause_menu(self):
+        self._ensure_menu_camera()
+        left, right, bottom, top = self._menu_bounds()
+        self._menu_hit_areas = []
 
-            summary = [
-                f"Leben: {self.lives}",
-                f"Verbleibende Zeit: {self._menu_bool_text(self.verbleibende_zeit_start)} ({self.verbleibende_zeit:.0f}s)" if self.verbleibende_zeit_start else "Verbleibende Zeit: Aus",
-                f"Zeit-Anzeige: {self._menu_bool_text(self.verbleibende_zeit_show)}",
-                f"Tränke: {self._menu_bool_text(self.tränke)}",
-                f"Schaden-Immunität: {self.schaden_immun_timer:.1f}s",
-                f"Genutzte Zeit anzeigen: {self._menu_bool_text(self.genutzte_zeit_show)}",
-                f"Genutzte Zeit aktivieren: {self._menu_bool_text(self.genutzte_zeit_use)}",
-            ]
-            y = top - 170
-            for line in summary:
-                arcade.draw_text(line, center_x, y, arcade.color.LIGHT_GRAY, 14, font_name="Kenney Pixel", anchor_x="center")
-                y -= 22
+        arcade.draw_lrbt_rectangle_filled(left, right, bottom, top, arcade.color.Color(10, 20, 45, 230))
+        center_x = (left + right) / 2
+        content_left = left + 40
+        button_width = 180
+        button_height = 34
 
-            funfact = "Funfact: Marcus hat Hardcore mit 2 Leben/79.3s und 1 Leben/91.5s gewonnen. Schaffst du das auch? ;)"
-            arcade.draw_text(funfact, center_x, bottom + 95, arcade.color.AQUA, 12, font_name="Kenney Pixel", anchor_x="center", width=700, multiline=True)
+        if self.pause_menu_screen == "main":
+            arcade.draw_text("PAUSE", center_x, top - 100, arcade.color.GOLD, 30, font_name="Kenney Blocks", anchor_x="center")
+            y = top - 160
+            self._menu_add_button(center_x - button_width / 2, y, button_width, button_height, "Weiterspielen", "pause_resume", arcade.color.SEA_GREEN)
+            y -= 50
+            self._menu_add_button(center_x - button_width / 2, y, button_width, button_height, "Highscores", "pause_highscores", arcade.color.DARK_SLATE_BLUE)
+            y -= 50
+            self._menu_add_button(center_x - button_width / 2, y, button_width, button_height, "Tutorial", "pause_tutorial", arcade.color.DARK_SLATE_BLUE)
+            y -= 50
+            self._menu_add_button(center_x - button_width / 2, y, button_width, button_height, "Reset", "pause_reset", arcade.color.DARK_SLATE_BLUE)
+            y -= 50
+            self._menu_add_button(center_x - button_width / 2, y, button_width, button_height, "Neues Spiel", "pause_new_game", arcade.color.DARK_SLATE_BLUE)
+            y -= 50
+            self._menu_add_button(center_x - button_width / 2, y, button_width, button_height, "Zum Hauptmenü", "pause_main_menu", arcade.color.DARK_RED)
 
-            self._menu_add_button(content_left, bottom + 28, button_width, button_height, "Zurück", "ready_back")
-            self._menu_add_button(
-                content_right - button_width,
-                bottom + 28,
-                button_width,
-                button_height,
-                "Spiel starten!",
-                "ready_start",
-                arcade.color.SEA_GREEN,
-            )
+        elif self.pause_menu_screen == "highscores":
+            arcade.draw_text("HIGHSCORES", center_x, top - 110, arcade.color.GOLD, 28, font_name="Kenney Blocks", anchor_x="center")
+            y = top - 150
+            if not self.save_data.get("highscores"):
+                arcade.draw_text("Noch keine Highscores vorhanden.", center_x, y, arcade.color.WHITE, 22, font_name="Kenney Pixel", anchor_x="center")
+            else:
+                for score in self.save_data["highscores"][:5]:
+                    text = f"Münzen: {score.get('münzen', 0)} | Schätze: {score.get('schätze', 0)} | Leben: {score.get('lives', 0)} | Zeit: {score.get('time', 0):.1f}s"
+                    arcade.draw_text(text, center_x, y, arcade.color.WHITE, 22, font_name="Kenney Pixel", anchor_x="center")
+                    y -= 34
+            self._menu_add_button(center_x - button_width / 2, bottom + 28, button_width, button_height, "Zurück", "highscores_back", arcade.color.SEA_GREEN)
+
+        elif self.pause_menu_screen == "tutorial":
+            self._draw_tutorial_screen(center_x, top, content_left, button_width, button_height, "tutorial_back")
 
     def _handle_setup_menu_key(self, symbol):
-        if self.menu_screen == "welcome" and symbol in (arcade.key.ENTER, arcade.key.RETURN, arcade.key.SPACE):
-            self._menu_handle_action("welcome_next")
+        if self.menu_screen == "tutorial" and symbol in (arcade.key.UP, arcade.key.W):
+            self.tutorial_scroll_offset = max(0, self.tutorial_scroll_offset - 1)
+            return
+        if self.menu_screen == "tutorial" and symbol in (arcade.key.DOWN, arcade.key.S):
+            self.tutorial_scroll_offset += 1
+            return
+        if self.menu_screen == "main_menu":
+            if symbol == arcade.key.ESCAPE:
+                self._menu_handle_action("main_menu_quit")
+        elif self.menu_screen == "highscores" and symbol == arcade.key.ESCAPE:
+            self._menu_handle_action("highscores_back")
+        elif self.menu_screen == "tutorial" and symbol == arcade.key.ESCAPE:
+            self._menu_handle_action("tutorial_back")
         elif self.menu_screen == "terms":
             if symbol in (arcade.key.Y, arcade.key.J):
                 self._menu_handle_action("terms_accept")
             elif symbol in (arcade.key.N, arcade.key.ESCAPE):
                 self._menu_handle_action("terms_decline")
-        elif self.menu_screen == "loading" and symbol in (arcade.key.ENTER, arcade.key.RETURN, arcade.key.SPACE):
-            self._menu_handle_action("loading_next")
         elif self.menu_screen == "preset":
             if symbol == arcade.key.KEY_1:
                 self._menu_handle_action("preset_1")
@@ -683,33 +917,69 @@ class Plattformer(arcade.Window):
                 self._menu_handle_action("preset_next")
             elif symbol == arcade.key.ESCAPE:
                 self._menu_handle_action("preset_back")
-        elif self.menu_screen in ("custom", "ready"):
+        elif self.menu_screen == "custom":
             if symbol in (arcade.key.ENTER, arcade.key.RETURN):
-                self._menu_handle_action("custom_next" if self.menu_screen == "custom" else "ready_start")
+                self._menu_handle_action("custom_next")
             elif symbol == arcade.key.ESCAPE:
-                self._menu_handle_action("custom_back" if self.menu_screen == "custom" else "ready_back")
+                self._menu_handle_action("custom_back")
 
     def on_mouse_press(self, x, y, button, modifiers):
-        if not self.start_menu or button != arcade.MOUSE_BUTTON_LEFT:
+        if not (self.start_menu or self.paused or self.gewonnen or self.verloren) or button != arcade.MOUSE_BUTTON_LEFT:
             return
 
         self._ensure_menu_camera()
+        world_x, world_y = self._screen_to_world(x, y)
 
         for left, right, bottom, top, action in self._menu_hit_areas:
-            if left <= x <= right and bottom <= y <= top:
+            if left <= world_x <= right and bottom <= world_y <= top:
                 self._menu_handle_action(action)
                 return
 
     def on_key_press(self, symbol, modifiers):
         if symbol == arcade.key.Q:
-            arcade.exit()
+            self._exit_game()
+            return
+
+        if symbol == arcade.key.M:
+            self._toggle_sound()
             return
 
         if self.start_menu:
             self._handle_setup_menu_key(symbol)
             return
 
+        if self.paused and self.pause_menu_screen == "tutorial" and symbol in (arcade.key.UP, arcade.key.W):
+            self.tutorial_scroll_offset = max(0, self.tutorial_scroll_offset - 1)
+            return
+        if self.paused and self.pause_menu_screen == "tutorial" and symbol in (arcade.key.DOWN, arcade.key.S):
+            self.tutorial_scroll_offset += 1
+            return
+
+        if not self.gewonnen and not self.verloren:
+            if symbol == arcade.key.P or symbol == arcade.key.ESCAPE:
+                if self.paused and self.pause_menu_screen != "main":
+                    pass # Handled by pause menu itself if we want ESC to go back, but let's just unpause or go back
+                else:
+                    self.paused = not self.paused
+                    self.pause_menu_screen = "main"
+                    if self.paused:
+                        self._play_pause_menu_music()
+                    else:
+                        self._play_background_music()
+
+        if self.paused:
+            if self.pause_menu_screen == "highscores" and symbol == arcade.key.ESCAPE:
+                self._menu_handle_action("highscores_back")
+            elif self.pause_menu_screen == "tutorial" and symbol == arcade.key.ESCAPE:
+                self._menu_handle_action("tutorial_back")
+            return
+
+        if self.gewonnen or self.verloren:
+            if symbol == arcade.key.R:
+                return
         if symbol == arcade.key.R:
+            if self.gewonnen or self.verloren:
+                return
             self.reset = True
         elif self.interact == True and not self.freeze_player:
 #            if self.start_menu:
@@ -739,7 +1009,13 @@ class Plattformer(arcade.Window):
             elif symbol == arcade.key.SPACE or symbol == arcade.key.UP or symbol == arcade.key.W:
                 if self.physik_engine.can_jump() == True:
                     self.spielfigur.change_y = 2.9
-                    #self.multi_jump = True
+                    if self.multi_jump:
+                        self._air_jumps_left = 1
+                    else:
+                        self._air_jumps_left = 0
+                elif self.multi_jump and self._air_jumps_left > 0:
+                    self.spielfigur.change_y = 2.9
+                    self._air_jumps_left = 0
 #                elif symbol == arcade.key.T:
 #                    if self.teleport == False:
 #                        self.teleport = True
@@ -753,10 +1029,7 @@ class Plattformer(arcade.Window):
 #                else:
 #                    self.koordinaten_anzeigen = False
             elif symbol == arcade.key.M:
-                if self.hintergrundmusik_sound and self.hintergrundmusik_sound.playing:
-                    arcade.stop_sound(self.hintergrundmusik_sound)
-                else:
-                    self.hintergrundmusik_sound = arcade.play_sound(self.hintergrundmusik, loop=True)
+                self._toggle_sound()
 
        # print("Ich mag Züge3!!!!!!!!(Wenn diese Nachricht angezeigt wird dann ist on_key_press() durchgelaufen)")
 
@@ -779,6 +1052,9 @@ class Plattformer(arcade.Window):
         if self.start_menu:
             return
 
+        if self.paused:
+            return
+
         if self.erstes_update:
             self.erstes_update = False
             return
@@ -787,7 +1063,16 @@ class Plattformer(arcade.Window):
 
         self.physik_engine.update()
 
+        if self.physik_engine.can_jump():
+            self._air_jumps_left = 0
+
         self.spielerliste.update()
+
+        if self.physik_engine.can_jump():
+            if self.multi_jump:
+                self._air_jumps_left = 1
+            else:
+                self._air_jumps_left = 0
 
         self.zeit_multi_jump -= delta_time
         
@@ -937,9 +1222,9 @@ class Plattformer(arcade.Window):
             for trank in hit_list:
                 self.zeit_multi_jump = 5.5
                 self.multi_jump = True
-                self.physik_engine.enable_multi_jump(allowed_jumps=2)
+                self._air_jumps_left = 1
                 trank.kill()
-                self.trank_player = arcade.play_sound(self.trank_sound)
+                self.trank_player = self._play_sound(self.trank_sound)
             
             hit_list = arcade.check_for_collision_with_list(self.spielfigur, self.tränke_jump_boost_spritelist)
             for trank in hit_list:
@@ -947,7 +1232,7 @@ class Plattformer(arcade.Window):
                 self.höher_springen = True
                 self.physik_engine.gravity_constant = 0.12
                 trank.kill()
-                self.trank_player = arcade.play_sound(self.trank_sound)
+                self.trank_player = self._play_sound(self.trank_sound)
 
         if arcade.check_for_collision_with_list(self.spielfigur, self.szene.get_sprite_list("Ziel")):
             if not self.gewonnen_sound_gespielt:
@@ -1052,6 +1337,21 @@ class Plattformer(arcade.Window):
         if self.verloren and not self.verloren_sound_gespielt:
             arcade.play_sound(self.verloren_sound)
             self.verloren_sound_gespielt = True # Merken, damit er nicht 60x pro Sekunde startet
+
+        if (self.gewonnen or self.verloren) and not getattr(self, "highscore_saved", False):
+            self.highscore_saved = True
+            entry = {
+                "münzen": round(self.münzen, 1),
+                "schätze": round(self.schätze, 1),
+                "lives": round(self.lives, 1),
+                "time": round(self.verbleibende_zeit if self.verbleibende_zeit_use else self.genutzte_zeit, 1)
+            }
+            if "highscores" not in self.save_data:
+                self.save_data["highscores"] = []
+            self.save_data["highscores"].append(entry)
+            self.save_data["highscores"].sort(key=lambda x: (x["münzen"] + x["schätze"] * 5), reverse=True)
+            self._write_saves()
+
         # cam_x, cam_y = self.camera.position
 
         # self.camera.position = self.spielfigur.position
@@ -1111,6 +1411,8 @@ class Plattformer(arcade.Window):
         self.multi_jump = False
         self.höher_springen = False
         self.jump_boost = False
+        self._air_jumps_left = 0
+        self._air_jumps_left = 0
         self.schaden_immun = False
         self.schaden_immun_anzeigen = False
         self.start_menu = False
@@ -1124,6 +1426,7 @@ class Plattformer(arcade.Window):
         self.achievement_stack_timer = 0.0
         self.achievement = None
         self.achievement_timer_new = 0.0
+        self.highscore_saved = False
 
         # 4. Aktive Sound-Kanäle und Player-Referenzen bereinigen
         self.shutdownsound = None
@@ -1131,7 +1434,8 @@ class Plattformer(arcade.Window):
         self.verloren_sound_player = None
         self.hackedsound = None
         self.nebenrisiken_sound = None
-        self.epic_music_sound = None
+        self._stop_sound("epic_music_sound")
+        self._stop_sound("hintergrundmusik_sound")
         self.advancement_player = None
         self.coin_player = None
         self.trank_player = None
@@ -1182,12 +1486,22 @@ class Plattformer(arcade.Window):
         )
 
         # 10. Normale Hintergrundmusik wieder von vorne starten
-        self.hintergrundmusik_sound = arcade.play_sound(self.hintergrundmusik, loop=True)
+        self._play_background_music()
         
 
     def on_draw(self):
         cam_x = self.camera.position[0]
         cam_y = self.camera.position[1]
+
+        if self.start_menu:
+            if self._current_music_mode != "pause":
+                self._play_pause_menu_music()
+        elif self.paused and not self.gewonnen and not self.verloren:
+            if self._current_music_mode != "pause":
+                self._play_pause_menu_music()
+        elif not self.start_menu and not self.paused and not self.gewonnen and not self.verloren:
+            if self._current_music_mode != "gameplay":
+                self._play_background_music()
 
         self.clear()
         self.camera.use()
@@ -1199,15 +1513,15 @@ class Plattformer(arcade.Window):
         arcade.draw_text(f"Schätze: {round(self.schätze, 1)}", cam_x - 282, cam_y - 285, font_size=24, font_name="Kenney Pixel", anchor_x="right")
 
         if self.schaden_immun_anzeigen:
-            arcade.draw_text(f"Du kriegst noch für: {round(self.schaden_immun_timer, 1)} keinen Schaden!", cam_x + 225, cam_y - 225, font_size=24, font_name="Kenney Pixel", anchor_x="right")
+            arcade.draw_text(f"Du kriegst noch für: {round(self.schaden_immun_timer, 1)} keinen Schaden!", cam_x + 225, cam_y - 200, font_size=24, font_name="Kenney Pixel", anchor_x="right")
         if self.höher_springen:
-            arcade.draw_text(f"Du hast noch für {round(self.zeit_jump_boost, 1)} Sekunden Jump Boost!", cam_x + 245, cam_y - 250, font_size=24, font_name="Kenney Pixel", anchor_x="right")
+            arcade.draw_text(f"Du hast noch für {round(self.zeit_jump_boost, 1)} Sekunden Jump Boost!", cam_x + 245, cam_y - 230, font_size=24, font_name="Kenney Pixel", anchor_x="right")
         if self.multi_jump:
-            arcade.draw_text(f"Du hast noch für {round(self.zeit_multi_jump, 1)} Sekunden Multi Jump!", cam_x + 245, cam_y - 260, font_size=24, font_name="Kenney Pixel", anchor_x="right")
+            arcade.draw_text(f"Du hast noch für {round(self.zeit_multi_jump, 1)} Sekunden Multi Jump!", cam_x + 245, cam_y - 280, font_size=24, font_name="Kenney Pixel", anchor_x="right")
         if self.plus1herz:
-            arcade.draw_text(f"+1 Herz", cam_x + 35, cam_y - 200, font_size=24, font_name="Kenney Pixel", anchor_x="right")
+            arcade.draw_text(f"+1 Herz", cam_x + 35, cam_y - 150, font_size=24, font_name="Kenney Pixel", anchor_x="right")
         if self.plus2herzen:
-            arcade.draw_text(f"+2 Herzen", cam_x + 35, cam_y - 210, font_size=24, font_name="Kenney Pixel", anchor_x="right")
+            arcade.draw_text(f"+2 Herzen", cam_x + 35, cam_y - 175, font_size=24, font_name="Kenney Pixel", anchor_x="right")
         if self.verbleibende_zeit_show:
             arcade.draw_text(f"Verbleibende Zeit: {round(self.verbleibende_zeit, 1)} Sekunden", cam_x + 385, cam_y + 265, font_size=24, font_name="Kenney Pixel", anchor_x="right")
         if self.genutzte_zeit_show:
@@ -1227,6 +1541,10 @@ class Plattformer(arcade.Window):
             self._draw_setup_menu()
             return
 
+        if self.paused:
+            self._draw_pause_menu()
+            return
+
         if self.gewonnen:
             self.interact = False
             self.verbleibende_zeit_start = False
@@ -1234,7 +1552,10 @@ class Plattformer(arcade.Window):
                 arcade.stop_sound(self.hintergrundmusik_sound)
             arcade.draw_lrbt_rectangle_filled(cam_x - 400, cam_x + 400, cam_y - 300, cam_y + 300, arcade.color.GREEN)
             arcade.draw_text("GEWONNEN", cam_x, cam_y, arcade.color.WHITE, 50, font_name="Kenney Blocks", anchor_x="center", anchor_y="center")
-            arcade.draw_text("Klicke R um das Spiel erneut zu starten", cam_x - 125, cam_y - 70, arcade.color.WHITE)
+            self._menu_hit_areas = []
+            self._menu_add_button(cam_x - 100, cam_y - 130, 200, 38, "Neues Spiel", "end_new_game", arcade.color.SEA_GREEN)
+            self._menu_add_button(cam_x - 100, cam_y - 182, 200, 38, "Hauptmenü", "end_main_menu", arcade.color.DARK_SLATE_BLUE)
+            self._menu_add_button(cam_x - 100, cam_y - 234, 200, 38, "Spiel beenden", "end_quit", arcade.color.DARK_RED)
             arcade.draw_text(f"Münzen: {round(self.münzen, 1)}", cam_x + 385, cam_y - 285, font_size=24, font_name="Kenney Pixel", anchor_x="right")
             arcade.draw_text(f"Leben: {round(self.lives, 1)}", cam_x - 307, cam_y + 270, font_size=24, font_name="Kenney Pixel", anchor_x="right")
             arcade.draw_text(f"Schätze: {round(self.schätze, 1)}", cam_x - 282, cam_y - 285, font_size=24, font_name="Kenney Pixel", anchor_x="right")
@@ -1254,7 +1575,10 @@ class Plattformer(arcade.Window):
                 arcade.stop_sound(self.epic_music_sound)
             arcade.draw_lrbt_rectangle_filled(cam_x - 400, cam_x + 400, cam_y - 300, cam_y + 300, arcade.color.RED)
             arcade.draw_text("VERLOREN", cam_x, cam_y, arcade.color.WHITE, 50, font_name="Kenney Blocks", anchor_x="center", anchor_y="center")
-            arcade.draw_text("Klicke R um das Spiel erneut zu starten", cam_x - 125, cam_y - 70, arcade.color.WHITE)
+            self._menu_hit_areas = []
+            self._menu_add_button(cam_x - 100, cam_y - 130, 200, 38, "Neues Spiel", "end_new_game", arcade.color.SEA_GREEN)
+            self._menu_add_button(cam_x - 100, cam_y - 182, 200, 38, "Hauptmenü", "end_main_menu", arcade.color.DARK_SLATE_BLUE)
+            self._menu_add_button(cam_x - 100, cam_y - 234, 200, 38, "Spiel beenden", "end_quit", arcade.color.DARK_RED)
             arcade.draw_text(f"Münzen: {round(self.münzen, 1)}", cam_x + 385, cam_y - 285, font_size=24, font_name="Kenney Pixel", anchor_x="right")
             arcade.draw_text(f"Leben: {round(self.lives, 1)}", cam_x - 307, cam_y + 270, font_size=24, font_name="Kenney Pixel", anchor_x="right")
             arcade.draw_text(f"Schätze: {round(self.schätze, 1)}", cam_x - 282, cam_y - 285, font_size=24, font_name="Kenney Pixel", anchor_x="right")
