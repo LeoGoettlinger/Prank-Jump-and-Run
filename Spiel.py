@@ -55,34 +55,34 @@ class Plattformer(arcade.Window):
 
         self.audio_nebenrisiken = arcade.load_sound(_asset_path("zu-nebenrisiken-und-wirkungen.wav"))
         self.nebenrisikensound = None
-        self.epic_music = arcade.load_sound(_asset_path("epic_music.mp3"))
+        self.epic_music = arcade.load_sound(_asset_path("epic_music.wav"))
         self.epic_music_sound = None
         self.menu_music = arcade.load_sound(_asset_path("menu-music.wav"))
         self.menu_music_sound = None
 
-        self.button_click_sound = arcade.load_sound(_asset_path("button-klick.mp3"))
+        self.button_click_sound = arcade.load_sound(_asset_path("button-klick.wav"))
 
         self.hintergrundmusik = arcade.load_sound(_asset_path("hintergrundmusik.wav"))
         self.hintergrundmusik_sound = None # arcade.play_sound(self.hintergrundmusik, loop=True)
         # arcade.stop_sound(self.epic_music_sound)
 
-        self.advancement_sound = arcade.load_sound(_asset_path("achievement.mp3"))
+        self.advancement_sound = arcade.load_sound(_asset_path("achievement.wav"))
         self.advancement_player = None# arcade.play_sound(self.advancement_sound)
         # arcade.stop_sound(self.advancement_player)
 
-        self.coin_sound = arcade.load_sound(_asset_path("coin_collect.mp3"))
+        self.coin_sound = arcade.load_sound(_asset_path("coin_collect.wav"))
         self.coin_player = None # arcade.play_sound(self.coin_sound)
         # arcade.stop_sound(self.coin_player)
 
-        self.trank_sound = arcade.load_sound(_asset_path("trank.mp3"))
+        self.trank_sound = arcade.load_sound(_asset_path("trank.wav"))
         self.trank_player = None # arcade.play_sound(self.trank_sound)
         # arcade.stop_sound(self.trank_player)
 
-        self.item_sound = arcade.load_sound(_asset_path("item-collect.mp3"))
+        self.item_sound = arcade.load_sound(_asset_path("item-collect.wav"))
         self.item_player = None # arcade.play_sound(self.item_sound)
         # arcade.stop_sound(self.item_player)
 
-        self.damage_sound = arcade.load_sound(_asset_path("damage.mp3"))
+        self.damage_sound = arcade.load_sound(_asset_path("damage.wav"))
         self.damage_player = None # arcade.play_sound(self.damage_sound)
         # arcade.stop_sound(self.damage_player)
 
@@ -356,6 +356,7 @@ class Plattformer(arcade.Window):
 
     def _stop_all_sounds(self):
         for attr_name in [
+            "menu_music_sound",
             "epic_music_sound",
             "hintergrundmusik_sound",
             "verloren_sound_player",
@@ -995,48 +996,43 @@ class Plattformer(arcade.Window):
             self._exit_game()
             return
 
-        elif symbol == arcade.key.M:
+        if symbol == arcade.key.M:
             self._toggle_sound()
             return
 
-        elif self.start_menu:
+        if self.start_menu:
             self._handle_setup_menu_key(symbol)
             return
 
-        elif self.paused and self.pause_menu_screen == "tutorial" and symbol in (arcade.key.UP, arcade.key.W):
-            self.tutorial_scroll_offset = max(0, self.tutorial_scroll_offset - 1)
-            return
-        elif self.paused and self.pause_menu_screen == "tutorial" and symbol in (arcade.key.DOWN, arcade.key.S):
-            self.tutorial_scroll_offset += 1
-            return
-
-        elif not self.gewonnen and not self.verloren:
-            if symbol == arcade.key.P or symbol == arcade.key.ESCAPE:
-                if self.paused and self.pause_menu_screen != "main":
-                    pass # Handled by pause menu itself if we want ESC to go back, but let's just unpause or go back
-                else:
-                    self.paused = not self.paused
-                    self.pause_menu_screen = "main"
-                    if self.paused:
-                        self._play_pause_menu_music()
-                    else:
-                        self._play_background_music()
-
-        elif self.paused:
-            if self.pause_menu_screen == "highscores" and symbol == arcade.key.ESCAPE:
+        if self.paused:
+            if self.pause_menu_screen == "tutorial" and symbol in (arcade.key.UP, arcade.key.W):
+                self.tutorial_scroll_offset = max(0, self.tutorial_scroll_offset - 1)
+            elif self.pause_menu_screen == "tutorial" and symbol in (arcade.key.DOWN, arcade.key.S):
+                self.tutorial_scroll_offset += 1
+            elif self.pause_menu_screen == "highscores" and symbol == arcade.key.ESCAPE:
                 self._menu_handle_action("highscores_back")
             elif self.pause_menu_screen == "tutorial" and symbol == arcade.key.ESCAPE:
                 self._menu_handle_action("tutorial_back")
+            elif self.pause_menu_screen == "main" and (symbol == arcade.key.P or symbol == arcade.key.ESCAPE):
+                self.paused = False
+                self.pause_menu_screen = "main"
+                self._play_background_music()
             return
 
-        elif self.gewonnen or self.verloren:
-            if symbol == arcade.key.R:
-                return
-        elif symbol == arcade.key.R:
-            if self.gewonnen or self.verloren:
-                return
+        if self.gewonnen or self.verloren:
+            return
+
+        if symbol == arcade.key.P or symbol == arcade.key.ESCAPE:
+            self.paused = True
+            self.pause_menu_screen = "main"
+            self._play_pause_menu_music()
+            return
+
+        if symbol == arcade.key.R:
             self.reset = True
-        elif self.interact == True and not self.freeze_player:
+            return
+
+        if self.interact == True and not self.freeze_player:
             if symbol == arcade.key.LEFT or symbol == arcade.key.A:
                 self.spielfigur.change_x = -1.0
             elif symbol == arcade.key.RIGHT or symbol == arcade.key.D:
@@ -1051,8 +1047,6 @@ class Plattformer(arcade.Window):
                 elif self.multi_jump and self._air_jumps_left > 0:
                     self.spielfigur.change_y = 2.9
                     self._air_jumps_left = 0
-            elif symbol == arcade.key.M:
-                self._toggle_sound()
 
     def on_key_release(self, symbol, modifiers):
         if symbol == arcade.key.UP or symbol == arcade.key.W or symbol == arcade.key.DOWN or symbol == arcade.key.S:
@@ -1451,7 +1445,7 @@ class Plattformer(arcade.Window):
         self.errorsound = None
         self.verloren_sound_player = None
         self.hackedsound = None
-        self.nebenrisiken_sound = None
+        self.nebenrisikensound = None
         self._stop_sound("epic_music_sound")
         self._stop_sound("hintergrundmusik_sound")
         self.advancement_player = None
