@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Builds a .msi installer for Windows using WiX Toolset.
+Builds a .msi installer for Windows using WiX Toolset v4.
 Called from .github/workflows/build.yml on the Windows runner.
 """
 import os
@@ -10,37 +10,37 @@ import sys
 def main():
     exe_path = os.path.abspath("dist/PrankJumpAndRun.exe")
     icon_path = os.path.abspath("creeper.ico")
-    
+
     if not os.path.exists(exe_path):
         print(f"Error: {exe_path} not found. Build .exe first.")
         sys.exit(1)
-    
-    if not os.path.exists(icon_path):
-        print(f"Warning: {icon_path} not found. Using default icon.")
-        icon_path = ""
 
-    # WICHTIG: Compressed="yes" damit die .exe wirklich ins MSI gepackt wird!
-    wxs_content = '''<?xml version="1.0" encoding="UTF-8"?>
+    has_icon = os.path.exists(icon_path)
+    icon_section = f'<Icon Id="app.ico" SourceFile="{icon_path}" /><Property Id="ARPPRODUCTICON" Value="app.ico" />' if has_icon else ''
+    icon_attr = 'Icon="app.ico"' if has_icon else ''
+
+    # KORREKTE WiX v4 Syntax: StandardDirectory + Component + File als direktes Kind
+    wxs_content = f'''<?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
     <Package Name="Prank Jump and Run"
-         Manufacturer="Leo Goettlinger"
-         Version="1.0.0"
-         UpgradeCode="12345678-1234-1234-1234-123456789abc"
-         Scope="perMachine"
-         Compressed="yes">
-        
+             Manufacturer="Leo Goettlinger"
+             Version="1.0.0"
+             UpgradeCode="12345678-1234-1234-1234-123456789abc"
+             Scope="perMachine"
+             Compressed="yes">
+
         <MajorUpgrade DowngradeErrorMessage="A newer version is already installed." />
-        
+
         {icon_section}
-        
+
         <StandardDirectory Id="ProgramFiles6432Folder">
             <Directory Id="APPLICATIONFOLDER" Name="PrankJumpAndRun">
                 <Component Id="MainExecutable" Guid="*" Bitness="always64">
-                    <File Id="PrankJumpAndRunExe" Name="PrankJumpAndRun.exe" Source="{exe_source}" KeyPath="yes" />
+                    <File Id="PrankJumpAndRunExe" Name="PrankJumpAndRun.exe" Source="{exe_path}" KeyPath="yes" />
                 </Component>
             </Directory>
         </StandardDirectory>
-        
+
         <StandardDirectory Id="ProgramMenuFolder">
             <Directory Id="ApplicationProgramsFolder" Name="Prank Jump and Run">
                 <Component Id="StartMenuShortcut" Guid="*">
@@ -54,7 +54,7 @@ def main():
                 </Component>
             </Directory>
         </StandardDirectory>
-        
+
         <StandardDirectory Id="DesktopFolder">
             <Component Id="DesktopShortcut" Guid="*">
                 <Shortcut Id="DesktopShortcut"
@@ -66,18 +66,14 @@ def main():
                 <RegistryValue Root="HKCU" Key="Software\\PrankJumpAndRun" Name="desktop_shortcut" Type="integer" Value="1" KeyPath="yes" />
             </Component>
         </StandardDirectory>
-        
+
         <Feature Id="MainFeature" Title="Prank Jump and Run" Level="1">
             <ComponentRef Id="MainExecutable" />
             <ComponentRef Id="StartMenuShortcut" />
             <ComponentRef Id="DesktopShortcut" />
         </Feature>
     </Package>
-</Wix>'''.format(
-        exe_source=exe_path,
-        icon_section=f'<Icon Id="app.ico" SourceFile="{icon_path}" /><Property Id="ARPPRODUCTICON" Value="app.ico" />' if icon_path else '',
-        icon_attr='Icon="app.ico"' if icon_path else ''
-    )
+</Wix>'''
 
     wxs_path = "installer.wxs"
     with open(wxs_path, "w", encoding="utf-8") as f:
@@ -92,10 +88,16 @@ def main():
         text=True,
     )
     if result.returncode != 0:
-        print(f"WiX build failed: {result.stderr}")
+        print(f"WiX build failed:\n{result.stderr}")
         sys.exit(1)
 
-    print(f"Done: .msi installer created at {msi_path}")
+    # Verify size
+    size_mb = os.path.getsize(msi_path) / (1024 * 1024)
+    print(f"Done: .msi installer created at {msi_path} ({size_mb:.1f} MB)")
+
+    if size_mb < 10:
+        print(f"WARNING: MSI is suspiciously small ({size_mb:.1f} MB). The executable may not be embedded correctly.")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
