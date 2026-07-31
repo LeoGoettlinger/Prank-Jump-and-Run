@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Builds a .msi installer for Windows using WiX Toolset v4.
-Called from .github/workflows/build.yml on the Windows runner.
+Creates desktop shortcuts and supports seamless upgrades.
 """
 import os
 import subprocess
@@ -12,21 +12,30 @@ def main():
     exe_path = os.path.abspath("dist/PrankJumpAndRun.exe")
     icon_path = os.path.abspath("creeper.ico")
 
+    print(f"=== MSI BUILD DEBUG ===")
+    print(f"Current working directory: {os.getcwd()}")
+    print(f"Looking for exe at: {exe_path}")
+    print(f"Looking for icon at: {icon_path}")
+    print(f"Contents of dist/: {os.listdir('dist') if os.path.exists('dist') else 'dist/ does not exist!'}")
+    print(f"=======================")
+
     if not os.path.exists(exe_path):
-        print(f"Error: {exe_path} not found. Build .exe first.")
+        print(f"FATAL ERROR: {exe_path} not found!")
         sys.exit(1)
 
-    has_icon = os.path.exists(icon_path)
-    icon_section = (
-        f'<Icon Id="app.ico" SourceFile="{icon_path}" />'
-        f'<Property Id="ARPPRODUCTICON" Value="app.ico" />'
-        if has_icon
-        else ""
-    )
-    icon_attr = 'Icon="app.ico"' if has_icon else ""
+    exe_size_mb = os.path.getsize(exe_path) / (1024 * 1024)
+    print(f"Found exe: {exe_size_mb:.1f} MB")
 
-    # KORREKTE WiX v4 Syntax: StandardDirectory + Component + File als direktes Kind
-    wxs_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+    has_icon = os.path.exists(icon_path)
+    
+    # Use forward slashes for WiX compatibility
+    exe_path_wix = exe_path.replace("\\", "/")
+    icon_path_wix = icon_path.replace("\\", "/") if has_icon else ""
+
+    icon_section = f'<Icon Id="app.ico" SourceFile="{icon_path_wix}" /><Property Id="ARPPRODUCTICON" Value="app.ico" />' if has_icon else ''
+    icon_attr = 'Icon="app.ico"' if has_icon else ''
+
+    wxs_content = f'''<?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
     <Package Name="Prank Jump and Run"
              Manufacturer="Leo Goettlinger"
@@ -35,7 +44,8 @@ def main():
              Scope="perMachine"
              Compressed="yes">
 
-        <MajorUpgrade DowngradeErrorMessage="A newer version is already installed." />
+        <MajorUpgrade DowngradeErrorMessage="A newer version is already installed."
+                      AllowSameVersionUpgrades="yes" />
 
         {icon_section}
 
@@ -44,7 +54,7 @@ def main():
                 <Component Id="MainExecutable" Guid="*" Bitness="always64">
                     <File Id="PrankJumpAndRunExe"
                           Name="PrankJumpAndRun.exe"
-                          Source="{exe_path}"
+                          Source="{exe_path_wix}"
                           KeyPath="yes" />
                 </Component>
             </Directory>
@@ -98,33 +108,34 @@ def main():
             <ComponentRef Id="DesktopShortcut" />
         </Feature>
     </Package>
-</Wix>"""
+</Wix>'''
 
     wxs_path = "installer.wxs"
     with open(wxs_path, "w", encoding="utf-8") as f:
         f.write(wxs_content)
     print("Created: installer.wxs")
 
-    # Build .msi with WiX v4
     msi_path = os.path.abspath("dist/PrankJumpAndRun.msi")
     result = subprocess.run(
-        ["wix", "build", wxs_path, "-o", msi_path, "-arch", "x64"],
+        ["wix", "build", wxs_path, "-o", msi_path, "-arch", "x64", "-v"],
         capture_output=True,
         text=True,
     )
+
+    if result.stdout:
+        print(f"WiX STDOUT:\n{result.stdout}")
+    if result.stderr:
+        print(f"WiX STDERR:\n{result.stderr}")
+
     if result.returncode != 0:
-        print(f"WiX build failed:\n{result.stderr}")
+        print(f"WiX build FAILED with exit code {result.returncode}")
         sys.exit(1)
 
-    # Verify size - MSI must contain the ~104MB exe
     size_mb = os.path.getsize(msi_path) / (1024 * 1024)
     print(f"Done: .msi installer created at {msi_path} ({size_mb:.1f} MB)")
 
     if size_mb < 50:
-        print(
-            f"ERROR: MSI is only {size_mb:.1f} MB but should be ~104 MB. "
-            f"The executable was NOT embedded correctly."
-        )
+        print(f"ERROR: MSI is only {size_mb:.1f} MB but should be ~104 MB.")
         sys.exit(1)
 
 

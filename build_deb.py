@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Builds a .deb package for Prank Jump and Run.
-Called from .github/workflows/build.yml on the Linux runner.
+Builds a .deb package for Linux with desktop shortcut and upgrade support.
 """
 import os
 import shutil
 import subprocess
 import sys
+
 
 def main():
     binary = "./dist/PrankJumpAndRun"
@@ -16,7 +16,6 @@ def main():
 
     deb_root = "./build/deb_package"
     
-    # Clean and create structure
     if os.path.exists(deb_root):
         shutil.rmtree(deb_root)
     os.makedirs(os.path.join(deb_root, "DEBIAN"))
@@ -33,7 +32,7 @@ def main():
     else:
         print("Warning: creeper.png not found, skipping icon")
 
-    # Create .desktop file
+    # Create .desktop file (for desktop shortcut and app menu)
     desktop_content = """[Desktop Entry]
 Type=Application
 Name=Prank Jump and Run
@@ -47,7 +46,7 @@ Categories=Game;
     with open(desktop_path, "w") as f:
         f.write(desktop_content)
 
-    # Create control file
+    # Create control file (with upgrade support)
     control_content = """Package: prank-jump-and-run
 Version: 1.0.0
 Section: games
@@ -78,6 +77,7 @@ Homepage: https://github.com/LeoGoettlinger/Prank-Jump-and-Run
 
     # Cleanup: remove ONLY temp dir, KEEP binary for AppImage!
     shutil.rmtree(deb_root)
+
 
 if __name__ == "__main__":
     main()
