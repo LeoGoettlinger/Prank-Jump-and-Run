@@ -1602,6 +1602,7 @@ class Plattformer(arcade.Window):
 
         if self.gewonnen:
             self._ensure_menu_camera()
+            self.camera.use()
             cam_x = self.camera.position[0]
             cam_y = self.camera.position[1]
             self.interact = False
@@ -1626,6 +1627,7 @@ class Plattformer(arcade.Window):
 
         if self.verloren:
             self._ensure_menu_camera()
+            self.camera.use()
             cam_x = self.camera.position[0]
             cam_y = self.camera.position[1]
             self.interact = False
