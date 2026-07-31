@@ -3,12 +3,10 @@
 Builds a .deb package for Prank Jump and Run.
 Called from .github/workflows/build.yml on the Linux runner.
 """
-
 import os
 import shutil
 import subprocess
 import sys
-
 
 def main():
     binary = "./dist/PrankJumpAndRun"
@@ -17,11 +15,10 @@ def main():
         sys.exit(1)
 
     deb_root = "./build/deb_package"
-
+    
     # Clean and create structure
     if os.path.exists(deb_root):
         shutil.rmtree(deb_root)
-
     os.makedirs(os.path.join(deb_root, "DEBIAN"))
     os.makedirs(os.path.join(deb_root, "usr", "games"))
     os.makedirs(os.path.join(deb_root, "usr", "share", "applications"))
@@ -79,10 +76,8 @@ Homepage: https://github.com/LeoGoettlinger/Prank-Jump-and-Run
 
     print(f"Done: .deb package created at {deb_file}")
 
-    # Cleanup: remove binary and temp dir, keep only .deb
-    os.remove(binary)
+    # Cleanup: remove ONLY temp dir, KEEP binary for AppImage!
     shutil.rmtree(deb_root)
-
 
 if __name__ == "__main__":
     main()

@@ -3,12 +3,10 @@
 Builds an AppImage for Linux.
 Called from .github/workflows/build.yml on the Linux runner.
 """
-
 import os
 import shutil
 import subprocess
 import sys
-
 
 def main():
     binary = os.path.abspath("dist/PrankJumpAndRun")
@@ -34,7 +32,6 @@ def main():
     appdir = os.path.abspath("build/PrankJumpAndRun.AppDir")
     if os.path.exists(appdir):
         shutil.rmtree(appdir)
-
     os.makedirs(os.path.join(appdir, "usr", "bin"))
     os.makedirs(os.path.join(appdir, "usr", "share", "applications"))
     os.makedirs(os.path.join(appdir, "usr", "share", "icons", "hicolor", "256x256", "apps"))
@@ -88,9 +85,7 @@ exec "${HERE}/usr/bin/prank-jump-and-run" "$@"
 
     # Cleanup
     shutil.rmtree(appdir)
-
     print(f"Done: AppImage created at {appimage_path}")
-
 
 if __name__ == "__main__":
     main()
