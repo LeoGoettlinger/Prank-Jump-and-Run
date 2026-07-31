@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 
+
 def main():
     exe_path = os.path.abspath("dist/PrankJumpAndRun.exe")
     icon_path = os.path.abspath("creeper.ico")
@@ -16,11 +17,16 @@ def main():
         sys.exit(1)
 
     has_icon = os.path.exists(icon_path)
-    icon_section = f'<Icon Id="app.ico" SourceFile="{icon_path}" /><Property Id="ARPPRODUCTICON" Value="app.ico" />' if has_icon else ''
-    icon_attr = 'Icon="app.ico"' if has_icon else ''
+    icon_section = (
+        f'<Icon Id="app.ico" SourceFile="{icon_path}" />'
+        f'<Property Id="ARPPRODUCTICON" Value="app.ico" />'
+        if has_icon
+        else ""
+    )
+    icon_attr = 'Icon="app.ico"' if has_icon else ""
 
     # KORREKTE WiX v4 Syntax: StandardDirectory + Component + File als direktes Kind
-    wxs_content = f'''<?xml version="1.0" encoding="UTF-8"?>
+    wxs_content = f"""<?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
     <Package Name="Prank Jump and Run"
              Manufacturer="Leo Goettlinger"
@@ -36,7 +42,10 @@ def main():
         <StandardDirectory Id="ProgramFiles6432Folder">
             <Directory Id="APPLICATIONFOLDER" Name="PrankJumpAndRun">
                 <Component Id="MainExecutable" Guid="*" Bitness="always64">
-                    <File Id="PrankJumpAndRunExe" Name="PrankJumpAndRun.exe" Source="{exe_path}" KeyPath="yes" />
+                    <File Id="PrankJumpAndRunExe"
+                          Name="PrankJumpAndRun.exe"
+                          Source="{exe_path}"
+                          KeyPath="yes" />
                 </Component>
             </Directory>
         </StandardDirectory>
@@ -48,9 +57,17 @@ def main():
                               Name="Prank Jump and Run"
                               Description="Its a Prank! Jump and Run"
                               Target="[APPLICATIONFOLDER]PrankJumpAndRun.exe"
-                              WorkingDirectory="APPLICATIONFOLDER" {icon_attr} />
-                    <RemoveFolder Id="RemoveApplicationProgramsFolder" Directory="ApplicationProgramsFolder" On="uninstall" />
-                    <RegistryValue Root="HKCU" Key="Software\\PrankJumpAndRun" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+                              WorkingDirectory="APPLICATIONFOLDER"
+                              {icon_attr} />
+                    <RemoveFolder Id="RemoveApplicationProgramsFolder"
+                                  Directory="ApplicationProgramsFolder"
+                                  On="uninstall" />
+                    <RegistryValue Root="HKCU"
+                                   Key="Software\\PrankJumpAndRun"
+                                   Name="installed"
+                                   Type="integer"
+                                   Value="1"
+                                   KeyPath="yes" />
                 </Component>
             </Directory>
         </StandardDirectory>
@@ -61,9 +78,17 @@ def main():
                           Name="Prank Jump and Run"
                           Description="Its a Prank! Jump and Run"
                           Target="[APPLICATIONFOLDER]PrankJumpAndRun.exe"
-                          WorkingDirectory="APPLICATIONFOLDER" {icon_attr} />
-                <RemoveFolder Id="RemoveDesktopFolder" Directory="DesktopFolder" On="uninstall" />
-                <RegistryValue Root="HKCU" Key="Software\\PrankJumpAndRun" Name="desktop_shortcut" Type="integer" Value="1" KeyPath="yes" />
+                          WorkingDirectory="APPLICATIONFOLDER"
+                          {icon_attr} />
+                <RemoveFolder Id="RemoveDesktopFolder"
+                              Directory="DesktopFolder"
+                              On="uninstall" />
+                <RegistryValue Root="HKCU"
+                               Key="Software\\PrankJumpAndRun"
+                               Name="desktop_shortcut"
+                               Type="integer"
+                               Value="1"
+                               KeyPath="yes" />
             </Component>
         </StandardDirectory>
 
@@ -73,7 +98,7 @@ def main():
             <ComponentRef Id="DesktopShortcut" />
         </Feature>
     </Package>
-</Wix>'''
+</Wix>"""
 
     wxs_path = "installer.wxs"
     with open(wxs_path, "w", encoding="utf-8") as f:
@@ -91,13 +116,17 @@ def main():
         print(f"WiX build failed:\n{result.stderr}")
         sys.exit(1)
 
-    # Verify size
+    # Verify size - MSI must contain the ~104MB exe
     size_mb = os.path.getsize(msi_path) / (1024 * 1024)
     print(f"Done: .msi installer created at {msi_path} ({size_mb:.1f} MB)")
 
-    if size_mb < 10:
-        print(f"WARNING: MSI is suspiciously small ({size_mb:.1f} MB). The executable may not be embedded correctly.")
+    if size_mb < 50:
+        print(
+            f"ERROR: MSI is only {size_mb:.1f} MB but should be ~104 MB. "
+            f"The executable was NOT embedded correctly."
+        )
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
