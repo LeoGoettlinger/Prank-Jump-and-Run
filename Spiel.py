@@ -226,6 +226,17 @@ class Plattformer(arcade.Window):
 
         self.genutzte_zeit_use = True
 
+        # Initial-Werte für reset_gameplay (müssen vor finalize_setup existieren)
+        self.initial_lives = 4
+        self.initial_verbleibende_zeit = 300.0
+        self.initial_tränke = True
+        self.initial_schaden_immun_timer = 3.0
+        self.initial_verbleibende_zeit_show = True
+        self.initial_verbleibende_zeit_start = True
+        self.initial_verbleibende_zeit_use = True
+        self.initial_genutzte_zeit_show = True
+        self.initial_genutzte_zeit_use = True
+
         arcade.load_font(":resources:fonts/ttf/Kenney/Kenney_Pixel.ttf")
         arcade.load_font(":resources:fonts/ttf/Kenney/Kenney_Blocks.ttf")
 
@@ -403,6 +414,7 @@ class Plattformer(arcade.Window):
 
     def setup(self):
         """Startet das grafische Setup-Menü statt Terminal-Eingaben."""
+        self._stop_all_sounds()
         self.start_menu = True
         self.freeze_player = True
         self.menu_screen = "main_menu" if self.accepted_terms else "terms"
@@ -596,7 +608,7 @@ class Plattformer(arcade.Window):
             self.accepted_terms = True
             self.save_data["accepted_terms"] = True
             self._write_saves()
-            self.menu_screen = "preset"
+            self.menu_screen = "main_menu"
         elif action == "terms_decline":
             self._exit_game()
         elif action == "preset_back":
@@ -625,6 +637,7 @@ class Plattformer(arcade.Window):
         elif action == "ready_back":
             self.menu_screen = "custom" if self.selected_preset == "4" else "preset"
         elif action == "ready_start":
+            self.reset_gameplay()
             self.finalize_setup()
         elif action == "custom_time_on":
             self.custom_verbleibende_zeit_start = True
@@ -1588,6 +1601,9 @@ class Plattformer(arcade.Window):
             return
 
         if self.gewonnen:
+            self._ensure_menu_camera()
+            cam_x = self.camera.position[0]
+            cam_y = self.camera.position[1]
             self.interact = False
             self.verbleibende_zeit_start = False
             if self.hintergrundmusik_sound and self.hintergrundmusik_sound.playing:
@@ -1609,6 +1625,9 @@ class Plattformer(arcade.Window):
                 arcade.draw_text(f"Genutzte Zeit: {round(self.genutzte_zeit, 1)} Sekunden", cam_x + 385, cam_y + 245, font_size=24, font_name="Kenney Pixel", anchor_x="right")
 
         if self.verloren:
+            self._ensure_menu_camera()
+            cam_x = self.camera.position[0]
+            cam_y = self.camera.position[1]
             self.interact = False
             self.verbleibende_zeit_start = False
             if self.hintergrundmusik_sound and self.hintergrundmusik_sound.playing:
