@@ -44,6 +44,9 @@ def main():
              Scope="perMachine"
              Compressed="yes">
 
+        <!-- DIES IST DER WICHTIGSTE FIX: Zwingt WiX, die CAB-Datei ins MSI zu betten -->
+        <MediaTemplate EmbedCab="yes" />
+
         <MajorUpgrade DowngradeErrorMessage="A newer version is already installed."
                       AllowSameVersionUpgrades="yes" />
 
