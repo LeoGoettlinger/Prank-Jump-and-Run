@@ -50,6 +50,7 @@ Ein actionreiches 2D Jump & Run Spiel, entwickelt mit Python und der Arcade-Bibl
 - **Dynamische Musik:** Die Hintergrundmusik wechselt automatisch zu epischer Musik, sobald du Level 3 erreichst
 - **Soundeffekte:** Für jede Aktion gibt es passende Sounds (Münzen, Tränke, Schaden, etc.)
 - **Musik-Steuerung:** Schalte mit `M` alle Sounds und Musik an/aus
+- **Menü-Musik:** Es gibt eine Menü Musik!
 
 ### 📱 Menüs & Navigation
 - **Start-Menü:** Neues Spiel starten, Highscores ansehen, Tutorial lesen oder Spiel beenden

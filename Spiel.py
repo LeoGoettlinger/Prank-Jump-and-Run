@@ -57,6 +57,8 @@ class Plattformer(arcade.Window):
         self.nebenrisikensound = None
         self.epic_music = arcade.load_sound(_asset_path("epic_music.mp3"))
         self.epic_music_sound = None
+        self.menu_music = arcade.load_sound(_asset_path("menu-music.wav"))
+        self.menu_music_sound = None
 
         self.button_click_sound = arcade.load_sound(_asset_path("button-klick.mp3"))
 
@@ -371,11 +373,12 @@ class Plattformer(arcade.Window):
 
     def _set_music_mode(self, mode):
         if getattr(self, "_current_music_mode", None) == mode and self.sound_enabled:
-            if mode == "pause" and self.epic_music_sound and self.epic_music_sound.playing:
+            if mode == "pause" and self.menu_music_sound and self.menu_music_sound.playing:
                 return
             if mode == "gameplay" and self.hintergrundmusik_sound and self.hintergrundmusik_sound.playing:
                 return
 
+        self._stop_sound("menu_music_sound")
         self._stop_sound("epic_music_sound")
         self._stop_sound("hintergrundmusik_sound")
 
@@ -384,7 +387,7 @@ class Plattformer(arcade.Window):
             return
 
         if mode == "pause":
-            self.epic_music_sound = self._play_sound(self.epic_music, loop=True)
+            self.menu_music_sound = self._play_sound(self.menu_music, loop=True)
         else:
             self.hintergrundmusik_sound = self._play_sound(self.hintergrundmusik, loop=True)
 
@@ -408,9 +411,6 @@ class Plattformer(arcade.Window):
                 self._play_pause_menu_music()
             else:
                 self._play_background_music()
-
-#        self.ich_habe_keine_ahnung = print("Ich habe keine Ahnung!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-#        print("Ich mag Züge!!!!!!!!(Wenn diese Nachricht angezeigt wird dann ist __init__ durchgelaufen)")
 
     def setup(self):
         """Startet das grafische Setup-Menü statt Terminal-Eingaben."""
@@ -995,22 +995,22 @@ class Plattformer(arcade.Window):
             self._exit_game()
             return
 
-        if symbol == arcade.key.M:
+        elif symbol == arcade.key.M:
             self._toggle_sound()
             return
 
-        if self.start_menu:
+        elif self.start_menu:
             self._handle_setup_menu_key(symbol)
             return
 
-        if self.paused and self.pause_menu_screen == "tutorial" and symbol in (arcade.key.UP, arcade.key.W):
+        elif self.paused and self.pause_menu_screen == "tutorial" and symbol in (arcade.key.UP, arcade.key.W):
             self.tutorial_scroll_offset = max(0, self.tutorial_scroll_offset - 1)
             return
-        if self.paused and self.pause_menu_screen == "tutorial" and symbol in (arcade.key.DOWN, arcade.key.S):
+        elif self.paused and self.pause_menu_screen == "tutorial" and symbol in (arcade.key.DOWN, arcade.key.S):
             self.tutorial_scroll_offset += 1
             return
 
-        if not self.gewonnen and not self.verloren:
+        elif not self.gewonnen and not self.verloren:
             if symbol == arcade.key.P or symbol == arcade.key.ESCAPE:
                 if self.paused and self.pause_menu_screen != "main":
                     pass # Handled by pause menu itself if we want ESC to go back, but let's just unpause or go back
@@ -1022,45 +1022,25 @@ class Plattformer(arcade.Window):
                     else:
                         self._play_background_music()
 
-        if self.paused:
+        elif self.paused:
             if self.pause_menu_screen == "highscores" and symbol == arcade.key.ESCAPE:
                 self._menu_handle_action("highscores_back")
             elif self.pause_menu_screen == "tutorial" and symbol == arcade.key.ESCAPE:
                 self._menu_handle_action("tutorial_back")
             return
 
-        if self.gewonnen or self.verloren:
+        elif self.gewonnen or self.verloren:
             if symbol == arcade.key.R:
                 return
-        if symbol == arcade.key.R:
+        elif symbol == arcade.key.R:
             if self.gewonnen or self.verloren:
                 return
             self.reset = True
         elif self.interact == True and not self.freeze_player:
-#            if self.start_menu:
-#                if symbol == arcade.key.KEY_1:
-#                    self.gamemode = "Einfach"
-#                elif symbol == arcade.key.KEY_2:
-#                    self.gamemode = "Normal"
-#                elif symbol == arcade.key.KEY_3:
-#                    self.gamemode = "Schwer"
-#                elif symbol == arcade.key.ENTER or symbol == arcade.key.RETURN:
-#                    print(f"Spiel gestartet mit Schwierigkeit: {self.gamemode}")
-#                    self.start_menu = False
-#                    self.freeze_player = False
-#                return
-#
-#                    self.pause = False
-#                # if symbol == arcade.key.UP or symbol == arcade.key.W:
-#               # self.spielfigur.change_y = 3
             if symbol == arcade.key.LEFT or symbol == arcade.key.A:
                 self.spielfigur.change_x = -1.0
-            # elif symbol == arcade.key.DOWN or symbol == arcade.key.S:
-        #      self.spielfigur.change_y = -3
             elif symbol == arcade.key.RIGHT or symbol == arcade.key.D:
                 self.spielfigur.change_x = 1.0
-            #elif symbol == arcade.key.R:
-            #   self.setup()
             elif symbol == arcade.key.SPACE or symbol == arcade.key.UP or symbol == arcade.key.W:
                 if self.physik_engine.can_jump() == True:
                     self.spielfigur.change_y = 2.9
@@ -1071,22 +1051,8 @@ class Plattformer(arcade.Window):
                 elif self.multi_jump and self._air_jumps_left > 0:
                     self.spielfigur.change_y = 2.9
                     self._air_jumps_left = 0
-#                elif symbol == arcade.key.T:
-#                    if self.teleport == False:
-#                        self.teleport = True
-#                    else:
-#                        self.teleport = False
-            #elif symbol == arcade.key.B:
-        #     self.setup()
-#            elif symbol == arcade.key.K:
-#                if self.koordinaten_anzeigen == False:
-#                    self.koordinaten_anzeigen = True
-#                else:
-#                    self.koordinaten_anzeigen = False
             elif symbol == arcade.key.M:
                 self._toggle_sound()
-
-       # print("Ich mag Züge3!!!!!!!!(Wenn diese Nachricht angezeigt wird dann ist on_key_press() durchgelaufen)")
 
     def on_key_release(self, symbol, modifiers):
         if symbol == arcade.key.UP or symbol == arcade.key.W or symbol == arcade.key.DOWN or symbol == arcade.key.S:
@@ -1418,10 +1384,7 @@ class Plattformer(arcade.Window):
         #     self.camera.position = (0, cam_y)
 
 
-
-
-
-        #self.verbleibende_zeit -= delta_time
+        # self.verbleibende_zeit -= delta_time
 
     #     arcade.check_for_collision(self.spielerliste, self.spielfigur, self.gewonnen)
 
