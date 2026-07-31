@@ -3,8 +3,8 @@ name: Cross-Platform Release Build
 on:
   push:
     branches: [ "main", "master" ]
-    tags: [ "v*" ]          # Automatischer Build bei Tags wie v1.0.0
-  workflow_dispatch:         # Manueller Start über GitHub-UI
+    tags: [ "v*" ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -26,27 +26,90 @@ jobs:
     - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt pyinstaller
+        pip install -r requirements.txt pyinstaller pillow
 
-    - name: Build for Windows (.exe)
+    # === ICON VORBEREITUNG ===
+    - name: Convert PNG to ICO (Windows)
+      if: matrix.os == 'windows-latest'
+      run: python -c "from PIL import Image; img = Image.open('creeper.png'); img.save('creeper.ico', format='ICO', sizes=[(256, 256)])"
+
+    - name: Convert PNG to ICNS (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        mkdir -p creeper.iconset
+        for size in 16 32 64 128 256 512; do
+          sips -z $size $size creeper.png --out creeper.iconset/icon_${size}x${size}.png
+          if [ $size -ne 512 ]; then
+            sips -z $((size*2)) $((size*2)) creeper.png --out creeper.iconset/icon_${size}x${size}@2x.png 2>/dev/null || true
+          fi
+        done
+        iconutil -c icns creeper.iconset -o creeper.icns
+        rm -rf creeper.iconset
+
+    # === WINDOWS: .exe + .msi ===
+    - name: Build Windows Portable (.exe)
       if: matrix.os == 'windows-latest'
       run: |
         pyinstaller --noconfirm --onefile --windowed `
           --name PrankJumpAndRun `
           --distpath ./dist `
           --add-data ".;." `
+          --icon creeper.ico `
           Spiel.py
 
-    - name: Build for macOS (.app)
+    - name: Install WiX Toolset (Windows)
+      if: matrix.os == 'windows-latest'
+      run: dotnet tool install --global wix --version 4.0.5
+
+    - name: Build Windows Installer (.msi)
+      if: matrix.os == 'windows-latest'
+      run: python build_msi.py
+
+    - name: Upload Windows Portable (.exe)
+      if: matrix.os == 'windows-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: PrankJumpAndRun-Windows-Portable
+        path: dist/PrankJumpAndRun.exe
+
+    - name: Upload Windows Installer (.msi)
+      if: matrix.os == 'windows-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: PrankJumpAndRun-Windows-Installer
+        path: dist/PrankJumpAndRun.msi
+
+    # === macOS: .app + .dmg ===
+    - name: Build macOS App (.app)
       if: matrix.os == 'macos-latest'
       run: |
         pyinstaller --noconfirm --onefile --windowed \
           --name PrankJumpAndRun \
           --distpath ./dist \
           --add-data ".:." \
+          --icon creeper.icns \
           Spiel.py
 
-    - name: Build for Linux (Binary)
+    - name: Build macOS Disk Image (.dmg)
+      if: matrix.os == 'macos-latest'
+      run: python build_dmg.py
+
+    - name: Upload macOS App (.app)
+      if: matrix.os == 'macos-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: PrankJumpAndRun-macOS-App
+        path: dist/PrankJumpAndRun.app
+
+    - name: Upload macOS Disk Image (.dmg)
+      if: matrix.os == 'macos-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: PrankJumpAndRun-macOS-DMG
+        path: dist/PrankJumpAndRun.dmg
+
+    # === LINUX: .deb + AppImage ===
+    - name: Build Linux Binary
       if: matrix.os == 'ubuntu-latest'
       run: |
         pyinstaller --noconfirm --onefile \
@@ -55,8 +118,24 @@ jobs:
           --add-data ".:." \
           Spiel.py
 
-    - name: Upload Artifacts
+    - name: Build Linux .deb Package
+      if: matrix.os == 'ubuntu-latest'
+      run: python build_deb.py
+
+    - name: Build Linux AppImage
+      if: matrix.os == 'ubuntu-latest'
+      run: python build_appimage.py
+
+    - name: Upload Linux .deb Package
+      if: matrix.os == 'ubuntu-latest'
       uses: actions/upload-artifact@v4
       with:
-        name: PrankJumpAndRun-${{ runner.os }}
-        path: dist/
+        name: PrankJumpAndRun-Linux-DEB
+        path: dist/PrankJumpAndRun-Linux.deb
+
+    - name: Upload Linux AppImage
+      if: matrix.os == 'ubuntu-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: PrankJumpAndRun-Linux-AppImage
+        path: dist/PrankJumpAndRun-x86_64.AppImage
