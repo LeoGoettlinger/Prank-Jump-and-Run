@@ -23,11 +23,11 @@ def main():
     wxs_content = '''<?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
     <Package Name="Prank Jump and Run"
-             Manufacturer="Leo Goettlinger"
-             Version="1.0.0"
-             UpgradeCode="12345678-1234-1234-1234-123456789abc"
-             Scope="perMachine"
-             Compressed="yes">
+         Manufacturer="Leo Goettlinger"
+         Version="1.0.0"
+         UpgradeCode="12345678-1234-1234-1234-123456789abc"
+         Scope="perMachine"
+         Compressed="yes">
         
         <MajorUpgrade DowngradeErrorMessage="A newer version is already installed." />
         
