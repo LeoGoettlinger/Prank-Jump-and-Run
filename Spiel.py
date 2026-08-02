@@ -418,6 +418,56 @@ class Plattformer(arcade.Window):
         self._stop_all_sounds()
         self.start_menu = True
         self.freeze_player = True
+
+        # Flags und Zustände zurücksetzen, damit beim nächsten Start nichts "hängen" bleibt
+        self.gewonnen = False
+        self.verloren = False
+        self.reset = False
+        self.gewonnen_sound_gespielt = False
+        self.verloren_sound_gespielt = False
+        self.level3_music_switched = False
+        self.highscore_saved = False
+
+        # Map und Szene komplett neu laden, damit gesammelte Objekte wieder da sind (wie in reset_gameplay)
+        self.tile_map = arcade.load_tilemap(_asset_path("Jump And Run.tmx"), use_spatial_hash=True)
+        self.szene = arcade.Scene.from_tilemap(self.tile_map)
+
+        # Spielerfigur zurücksetzen und der neuen Szene hinzufügen
+        self.spielfigur.center_x = 20
+        self.spielfigur.center_y = 308
+        self.spielfigur.change_x = 0
+        self.spielfigur.change_y = 0
+        self.spielerliste = arcade.SpriteList()
+        self.spielerliste.append(self.spielfigur)
+        self.szene.add_sprite("Spielfigur", self.spielfigur)
+
+        # Alle Sprite-Listen-Referenzen neu an die frische Map binden (wie in reset_gameplay Punkt 8)
+        self.walls = [
+            self.szene.get_sprite_list("Tile Layer 1"),
+            self.szene.get_sprite_list("Röhre"),
+            self.szene.get_sprite_list("Unsichtbare Blöcke"),
+            self.szene.get_sprite_list("Tor 1"),
+            self.szene.get_sprite_list("Tor 2"),
+            self.szene.get_sprite_list("Schatz-Raum Verschließ-Blöcke")
+        ]
+        self.münzen_spritelist = self.szene.get_sprite_list("Münzen")
+        self.tor1 = [self.szene.get_sprite_list("Tor 1"), self.szene.get_sprite_list("Reader 1")]
+        self.tränke_multi_jump_spritelist = self.szene.get_sprite_list("Tränke Multi_Jump")
+        self.tränke_plus_ein_herz_spritelist = self.szene.get_sprite_list("Tränke + 1 Herz")
+        self.tränke_plus_zwei_herzen_spritelist = self.szene.get_sprite_list("Tränke + 2 Herzen")
+        self.tränke_jump_boost_spritelist = self.szene.get_sprite_list("Tränke Jump_Boost")
+        self.ladder_liste = self.szene.get_sprite_list("Wasser")
+        self.key_schatzraum = self.szene.get_sprite_list("Schlüssel Schatz-Raum")
+        self.key_level_2 = self.szene.get_sprite_list("Schlüssel 2")
+        self.tor2 = [self.szene.get_sprite_list("Tor 2"), self.szene.get_sprite_list("Hebel Level 2")]
+        self.schatzraum_protector = [self.szene.get_sprite_list("Schatz-Raum Verschließ-Blöcke"), self.szene.get_sprite_list("Activate Schatz-Raum")]
+        self.schatz_liste = self.szene.get_sprite_list("Schatz-Kiste")
+
+        # Physik-Engine mit der frischen Wall-Liste neu initialisieren
+        self.physik_engine = arcade.PhysicsEnginePlatformer(
+            player_sprite=self.spielfigur, platforms=self.walls, gravity_constant=0.1, ladders=self.ladder_liste
+        )
+
         self.menu_screen = "main_menu" if self.accepted_terms else "terms"
         self.selected_preset = "2"
         self.paused = False
@@ -598,13 +648,16 @@ class Plattformer(arcade.Window):
         elif action == "end_quit":
             self._exit_game()
         elif action == "end_main_menu":
+            self._stop_all_sounds()
             self.gewonnen = False
             self.verloren = False
             self.setup()
         elif action == "end_new_game":
             self.gewonnen = False
             self.verloren = False
-            self.reset = True
+            self._stop_all_sounds()
+            self.setup()
+            self.menu_screen = "preset"
         elif action == "terms_accept":
             self.accepted_terms = True
             self.save_data["accepted_terms"] = True
@@ -1350,10 +1403,10 @@ class Plattformer(arcade.Window):
 
 
         if self.verloren and not self.verloren_sound_gespielt:
-            arcade.play_sound(self.verloren_sound)
+            self.verloren_sound_player = self._play_sound(self.verloren_sound)
             self.verloren_sound_gespielt = True # Merken, damit er nicht 60x pro Sekunde startet
 
-        if (self.gewonnen or self.verloren) and not getattr(self, "highscore_saved", False):
+        if self.gewonnen and not getattr(self, "highscore_saved", False):
             self.highscore_saved = True
             entry = {
                 "münzen": round(self.münzen, 1),
@@ -1562,10 +1615,11 @@ class Plattformer(arcade.Window):
             self.camera.use()
             cam_x = self.camera.position[0]
             cam_y = self.camera.position[1]
-            self.interact = False
-            self.verbleibende_zeit_start = False
+            self.interact = True
             if self.hintergrundmusik_sound and self.hintergrundmusik_sound.playing:
                 arcade.stop_sound(self.hintergrundmusik_sound)
+            if self.epic_music_sound and self.epic_music_sound.playing:
+                arcade.stop_sound(self.epic_music_sound)
             arcade.draw_lrbt_rectangle_filled(cam_x - 400, cam_x + 400, cam_y - 300, cam_y + 300, arcade.color.GREEN)
             arcade.draw_text("GEWONNEN", cam_x, cam_y, arcade.color.WHITE, 50, font_name="Kenney Blocks", anchor_x="center", anchor_y="center")
             self._menu_hit_areas = []
@@ -1577,8 +1631,6 @@ class Plattformer(arcade.Window):
             arcade.draw_text(f"Schätze: {round(self.schätze, 1)}", cam_x - 282, cam_y - 285, font_size=24, font_name="Kenney Pixel", anchor_x="right")
             if self.verbleibende_zeit_use == True:
                 arcade.draw_text(f"Verbleibende Zeit: {round(self.verbleibende_zeit, 1)} Sekunden", cam_x + 385, cam_y + 265, font_size=24, font_name="Kenney Pixel", anchor_x="right")
-            if self.genutzte_zeit_use == True:
-                self.genutzte_zeit_use = False  # Verhindert, dass die Zeit weiterläuft, nachdem das Spiel gewonnen wurde
             if self.genutzte_zeit_show == True:
                 arcade.draw_text(f"Genutzte Zeit: {round(self.genutzte_zeit, 1)} Sekunden", cam_x + 385, cam_y + 245, font_size=24, font_name="Kenney Pixel", anchor_x="right")
 
@@ -1587,8 +1639,7 @@ class Plattformer(arcade.Window):
             self.camera.use()
             cam_x = self.camera.position[0]
             cam_y = self.camera.position[1]
-            self.interact = False
-            self.verbleibende_zeit_start = False
+            self.interact = True
             if self.hintergrundmusik_sound and self.hintergrundmusik_sound.playing:
                 arcade.stop_sound(self.hintergrundmusik_sound)
             if self.epic_music_sound and self.epic_music_sound.playing:
@@ -1604,8 +1655,6 @@ class Plattformer(arcade.Window):
             arcade.draw_text(f"Schätze: {round(self.schätze, 1)}", cam_x - 282, cam_y - 285, font_size=24, font_name="Kenney Pixel", anchor_x="right")
             if self.verbleibende_zeit_use == True:
                 arcade.draw_text(f"Verbleibende Zeit: {round(self.verbleibende_zeit, 1)} Sekunden", cam_x + 385, cam_y + 265, font_size=24, font_name="Kenney Pixel", anchor_x="right")
-            if self.genutzte_zeit_use == True:
-                self.genutzte_zeit_use = False  # Verhindert, dass die Zeit weiterläuft, nachdem das Spiel verloren wurde
             if self.genutzte_zeit_show == True:
                 arcade.draw_text(f"Genutzte Zeit: {round(self.genutzte_zeit, 1)} Sekunden", cam_x + 385, cam_y + 245, font_size=24, font_name="Kenney Pixel", anchor_x="right")
 
