@@ -120,7 +120,7 @@ Die Skripte prüfen, ob alles vorhanden ist, erstellen eine isolierte virtuelle 
 * **Spiel beenden (Quit):** `Q`
 * **Spiel neu starten (Reset):** `R` (Nützlich, wenn du gewonnen oder verloren hast)
 * **Sounds an/ausschalten:** `M`
-* **Pause Menü:** `P`/``Esc`
+* **Pause Menü:** `P`/`Esc`
 
 ---
 

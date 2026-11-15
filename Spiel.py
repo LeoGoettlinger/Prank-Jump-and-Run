@@ -24,7 +24,7 @@ def _asset_path(filename):
 
 class Plattformer(arcade.Window):
     def __init__(self):
-        super().__init__(800, 600, "Its a Prank! Jump and Run v1.5")
+        super().__init__(800, 600, "Its a Prank! Jump and Run v1.6")
 
         arcade.set_background_color(arcade.color.AIR_FORCE_BLUE)
 
