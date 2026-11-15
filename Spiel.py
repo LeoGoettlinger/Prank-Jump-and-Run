@@ -1,7 +1,7 @@
 import pyglet
 pyglet.options["osx_alt_loop"] = True
 
-import arcade, random
+import arcade
 import yaml
 import os
 import shutil
@@ -14,12 +14,21 @@ from cryptography.fernet import Fernet
 
 
 def _asset_path(filename):
+    """Findet Assets sowohl im Quelltext-Betrieb als auch im PyInstaller-Build."""
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    candidates = []
     if getattr(sys, "frozen", False):
-        base = sys._MEIPASS
-        candidate = os.path.join(base, filename)
+        # PyInstaller --onefile entpackt nach sys._MEIPASS,
+        # --onedir legt die Daten neben die Executable.
+        candidates.append(os.path.join(getattr(sys, "_MEIPASS", base_dir), filename))
+        candidates.append(os.path.join(base_dir, filename))
+    candidates.append(os.path.join(base_dir, filename))
+    if not getattr(sys, "frozen", False):
+        candidates.append(os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), filename))
+    for candidate in candidates:
         if os.path.exists(candidate):
             return candidate
-    return os.path.join(os.path.dirname(__file__), filename)
+    return os.path.join(base_dir, filename)
 
 
 class Plattformer(arcade.Window):
@@ -70,23 +79,23 @@ class Plattformer(arcade.Window):
         # arcade.stop_sound(self.epic_music_sound)
 
         self.advancement_sound = arcade.load_sound(_asset_path("achievement.wav"))
-        self.advancement_player = None# arcade.play_sound(self.advancement_sound)
+        self.advancement_player = None# self._play_sound(self.advancement_sound)
         # arcade.stop_sound(self.advancement_player)
 
         self.coin_sound = arcade.load_sound(_asset_path("coin_collect.wav"))
-        self.coin_player = None # arcade.play_sound(self.coin_sound)
+        self.coin_player = None # self._play_sound(self.coin_sound)
         # arcade.stop_sound(self.coin_player)
 
         self.trank_sound = arcade.load_sound(_asset_path("trank.wav"))
-        self.trank_player = None # arcade.play_sound(self.trank_sound)
+        self.trank_player = None # self._play_sound(self.trank_sound)
         # arcade.stop_sound(self.trank_player)
 
         self.item_sound = arcade.load_sound(_asset_path("item-collect.wav"))
-        self.item_player = None # arcade.play_sound(self.item_sound)
+        self.item_player = None # self._play_sound(self.item_sound)
         # arcade.stop_sound(self.item_player)
 
         self.damage_sound = arcade.load_sound(_asset_path("damage.wav"))
-        self.damage_player = None # arcade.play_sound(self.damage_sound)
+        self.damage_player = None # self._play_sound(self.damage_sound)
         # arcade.stop_sound(self.damage_player)
 
         self.level_1 = False
@@ -242,8 +251,13 @@ class Plattformer(arcade.Window):
         self.initial_genutzte_zeit_show = True
         self.initial_genutzte_zeit_use = True
 
-        arcade.load_font(":resources:fonts/ttf/Kenney/Kenney_Pixel.ttf")
-        arcade.load_font(":resources:fonts/ttf/Kenney/Kenney_Blocks.ttf")
+        try:
+            arcade.load_font(":resources:fonts/ttf/Kenney/Kenney_Pixel.ttf")
+            arcade.load_font(":resources:fonts/ttf/Kenney/Kenney_Blocks.ttf")
+        except Exception:
+            # Ohne die Kenney-Fonts fällt Arcade auf eine Standardschrift zurück,
+            # das Spiel bleibt aber spielbar.
+            pass
 
         self.save_dir = self._get_user_data_dir()
         self.save_file = os.path.join(self.save_dir, "saves.yml")
@@ -275,16 +289,15 @@ class Plattformer(arcade.Window):
         self.kill_switch_checked = False
 
         def _sound_gate(sound, *args, **kwargs):
-            if not self.sound_enabled:
-                return None
-            return self._arcade_play_sound(sound, *args, **kwargs)
+            return self._play_sound(sound, *args, **kwargs)
 
         arcade.play_sound = _sound_gate
 
         self.setup()
-        
-        # Check kill switch after setup (non-blocking check)
-        self._check_kill_switch()
+
+        # Kill-Switch-Check nach dem Setup (kurzer Timeout, Fehler werden
+        # ignoriert, damit das Spiel auch offline startet).
+        self._apply_kill_switch(*self._check_kill_switch())
 
     def _get_user_data_dir(self):
         if os.name == "nt":
@@ -344,25 +357,56 @@ class Plattformer(arcade.Window):
                 encrypted_data = f.read()
             decrypted_data = self.cipher.decrypt(encrypted_data)
             data = yaml.safe_load(decrypted_data)
-            return data if data else {}
+            if not isinstance(data, dict):
+                return {}
+            return data
         except Exception:
+            # Defekte oder mit einem anderen Schlüssel verschlüsselte Datei:
+            # nicht überschreiben, sondern als Backup beiseitelegen.
+            try:
+                shutil.copy2(self.save_file, self.save_file + ".bak")
+            except Exception:
+                pass
             return {}
 
     def _write_saves(self):
         data_str = yaml.dump(self.save_data_full).encode("utf-8")
         encrypted_data = self.cipher.encrypt(data_str)
-        with open(self.save_file, "wb") as f:
-            f.write(encrypted_data)
+        # Atomar schreiben, damit ein Absturz mitten im Speichern den
+        # Spielstand nicht zerstört.
+        tmp_file = self.save_file + ".tmp"
+        try:
+            with open(tmp_file, "wb") as f:
+                f.write(encrypted_data)
+            os.replace(tmp_file, self.save_file)
+        except Exception:
+            try:
+                if os.path.exists(tmp_file):
+                    os.remove(tmp_file)
+            except Exception:
+                pass
 
     def _play_sound(self, sound, *args, **kwargs):
-        if not self.sound_enabled:
+        if not self.sound_enabled or sound is None:
             return None
-        return self._arcade_play_sound(sound, *args, **kwargs)
+        # Sound-Fehler (fehlender Audiogerät-Treiber, kaputte Datei) dürfen
+        # das Spiel nicht beenden - im Zweifel bleibt es einfach stumm.
+        try:
+            return self._arcade_play_sound(sound, *args, **kwargs)
+        except Exception:
+            return None
 
     def _stop_sound(self, attr_name):
         sound = getattr(self, attr_name, None)
-        if sound and getattr(sound, "playing", False):
+        if sound is None:
+            return
+        try:
+            # Einmal abgespielte Effekte sind danach nicht mehr "playing",
+            # müssen aber trotzdem freigegeben werden.
             arcade.stop_sound(sound)
+        except Exception:
+            # Bereits beendete Player dürfen das Spiel nicht crashen.
+            pass
         setattr(self, attr_name, None)
 
     def _stop_all_sounds(self):
@@ -542,44 +586,47 @@ class Plattformer(arcade.Window):
         self._menu_add_button(left + width - button_width, bottom, button_width, height, "+", plus_action, arcade.color.DARK_SLATE_GRAY)
 
     def apply_preset_settings(self, preset):
+        # Alle zeitbezogenen Flags zuerst auf den Standard setzen, damit
+        # Einstellungen eines vorherigen Runs (z. B. Custom ohne Zeitlimit)
+        # nicht in den nächsten Preset-Run "hineinlecken".
+        self.verbleibende_zeit_use = True
+        self.verbleibende_zeit_show = True
+        self.verbleibende_zeit_start = True
+        self.genutzte_zeit_show = True
+        self.genutzte_zeit_use = True
+
         if preset == "1":
             self.lives = 6
             self.verbleibende_zeit = 600.0
             self.tränke = True
             self.schaden_immun_timer = 2.0
-            self.verbleibende_zeit_show = True
-            self.verbleibende_zeit_start = True
-            self.genutzte_zeit_show = True
         elif preset == "2":
             self.lives = 4
             self.verbleibende_zeit = 300.0
             self.tränke = True
             self.schaden_immun_timer = 3.0
-            self.verbleibende_zeit_show = True
-            self.verbleibende_zeit_start = True
-            self.genutzte_zeit_show = True
         elif preset == "3":
             self.lives = 3
             self.verbleibende_zeit = 120.0
             self.tränke = False
             self.schaden_immun_timer = 0.0
-            self.verbleibende_zeit_show = True
-            self.verbleibende_zeit_start = True
-            self.genutzte_zeit_show = True
         elif preset == "4":
             self.verbleibende_zeit_start = self.custom_verbleibende_zeit_start
+            self.verbleibende_zeit_use = self.custom_verbleibende_zeit_start
             if self.verbleibende_zeit_start:
                 self.verbleibende_zeit = self.custom_verbleibende_zeit
                 self.verbleibende_zeit_show = self.custom_verbleibende_zeit_show
             else:
                 self.verbleibende_zeit_use = False
                 self.verbleibende_zeit_show = False
+                self.verbleibende_zeit = 0.0
 
             self.tränke = self.custom_tränke
             self.lives = self.custom_lives
             self.schaden_immun_timer = self.custom_schaden_immun_timer
             self.genutzte_zeit_show = self.custom_genutzte_zeit_show
-            self.genutzte_zeit_use = self.custom_genutzte_zeit_use
+            self.genutzte_zeit_use = self.custom_genutzte_zeit_show and self.custom_genutzte_zeit_use
+            self.verbleibende_zeit_use = self.custom_verbleibende_zeit_start
         else:
             self.apply_preset_settings("2")
 
@@ -594,7 +641,11 @@ class Plattformer(arcade.Window):
         self.zeit_multi_jump = 0.0
         self.zeit_jump_boost = 0.0
         self.genutzte_zeit = 0.0
-        self.verbleibende_zeit_use = self.verbleibende_zeit_start
+        self.münzen = 0
+        self.schätze = 0
+        self.schaden_immun = False
+        self.schaden_immun_anzeigen = False
+        self.highscore_saved = False
 
         self.initial_lives = self.lives
         self.initial_verbleibende_zeit = self.verbleibende_zeit
@@ -606,7 +657,6 @@ class Plattformer(arcade.Window):
         self.initial_genutzte_zeit_show = self.genutzte_zeit_show
         self.initial_genutzte_zeit_use = self.genutzte_zeit_use
 
-        self.genutzte_zeit_use = self.genutzte_zeit_show
         self.gamemode = self._menu_preset_name(preset)
         self._set_music_mode("gameplay")
         self.start_menu = False
@@ -751,38 +801,50 @@ class Plattformer(arcade.Window):
             pass
 
     def _check_kill_switch(self):
-        """Check the kill switch status from the remote status.json."""
+        """Prüft den Kill-Switch-Status aus der remote status.json.
+
+        Gibt ein Tupel ``(aktiv, message)`` zurück. Netzwerkfehler werden
+        bewusst still ignoriert, damit das Spiel auch offline startet.
+        """
         url = "https://leogoettlinger.github.io/Status-PJR-Game/status.json"
         try:
-            # Create SSL context that doesn't verify (for compatibility)
-            ssl_context = ssl.create_default_context()
-            ssl_context.check_hostname = False
-            ssl_context.verify_mode = ssl.CERT_NONE
-            
             req = urllib.request.Request(
                 url,
-                headers={'User-Agent': 'Prank-Jump-and-Run/1.5'},
+                headers={'User-Agent': 'Prank-Jump-and-Run/1.6'},
                 method='GET'
             )
-            response = urllib.request.urlopen(req, context=ssl_context, timeout=5)
-            data = json.loads(response.read().decode('utf-8'))
-            
+            # Zertifikatsprüfung bleibt aktiv: deaktiviertes TLS würde
+            # Angreifern erlauben, den Status zu fälschen.
+            response = urllib.request.urlopen(req, timeout=3)
+            with response:
+                data = json.loads(response.read().decode('utf-8'))
+            if not isinstance(data, dict):
+                return False, ""
+
             if data.get("killSwitchActive", False):
-                self.kill_switch_active = True
-                self.kill_switch_message = data.get("shortGameMessage", "Das Spiel wurde deaktiviert.")
-                self.kill_switch_checked = True
-                # Stop any music and show kill switch screen
-                self._stop_all_sounds()
-                self.start_menu = True
-                self.menu_screen = "kill_switch"
-            else:
-                self.kill_switch_checked = True
-        except (urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError, TimeoutError, ssl.SSLError):
-            # No internet or other network error - skip the check
-            self.kill_switch_checked = True
+                message = data.get("shortGameMessage") or "Das Spiel wurde deaktiviert."
+                return True, str(message)
+            return False, ""
+        except (urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError,
+                TimeoutError, ssl.SSLError, OSError):
+            # Kein Internet / Timeout / kaputtes JSON -> Check überspringen
+            return False, ""
         except Exception:
-            # Any other error - skip the check
-            self.kill_switch_checked = True
+            return False, ""
+
+    def _apply_kill_switch(self, active, message):
+        """Reagiert auf das Ergebnis des Kill-Switch-Checks."""
+        self.kill_switch_checked = True
+        if not active:
+            return
+        self.kill_switch_active = True
+        self.kill_switch_message = message
+        # Musik stoppen und Kill-Switch-Screen anzeigen
+        self._stop_all_sounds()
+        self.start_menu = True
+        self.paused = False
+        self.freeze_player = True
+        self.menu_screen = "kill_switch"
 
     def _draw_kill_switch_screen(self):
         """Draw the kill switch error screen with a button to open the status page."""
@@ -845,7 +907,15 @@ class Plattformer(arcade.Window):
         )
 
     def _ensure_menu_camera(self):
+        """Setzt die Kamera auf das Menü-Layout und wendet sie an.
+
+        Wichtig: Ein reines Setzen von ``camera.position`` genügt nicht, die
+        View-Matrix wird erst durch ``camera.use()`` an den Renderer übergeben.
+        Ohne diesen Aufruf werden Menüs mit der Kamera des Spiels gezeichnet
+        und landen dadurch außerhalb des Bildschirms.
+        """
         self.camera.position = (self.width / 2, self.height / 2)
+        self.camera.use()
 
     def _screen_to_world(self, x, y):
         cam_x, cam_y = self.camera.position
@@ -1185,6 +1255,12 @@ class Plattformer(arcade.Window):
             return
 
         if self.gewonnen or self.verloren:
+            # Endscreen: "R" startet wie im README beschrieben sofort neu.
+            if symbol == arcade.key.R:
+                self.gewonnen = False
+                self.verloren = False
+                self.setup()
+                self.menu_screen = "preset"
             return
 
         if symbol == arcade.key.P or symbol == arcade.key.ESCAPE:
@@ -1214,9 +1290,11 @@ class Plattformer(arcade.Window):
                     self._air_jumps_left = 0
 
     def on_key_release(self, symbol, modifiers):
-        if symbol == arcade.key.UP or symbol == arcade.key.W or symbol == arcade.key.DOWN or symbol == arcade.key.S:
-            self.spielfigur.change_y = 0
-        elif symbol == arcade.key.LEFT or symbol == arcade.key.A or symbol == arcade.key.RIGHT or symbol == arcade.key.D:
+        # Nur die horizontale Bewegung wird beim Loslassen gestoppt.
+        # change_y darf hier NICHT genullt werden, sonst wird ein laufender
+        # Sprung abgebrochen, sobald eine der Sprung-/Bewegungstasten
+        # losgelassen wird.
+        if symbol in (arcade.key.LEFT, arcade.key.A, arcade.key.RIGHT, arcade.key.D):
             self.spielfigur.change_x = 0
 
     def _clamp(self, wert, min, max):
@@ -1226,6 +1304,18 @@ class Plattformer(arcade.Window):
             return max
         else:
             return wert
+
+    def _teleport(self, x, y):
+        """Setzt die Spielfigur an eine neue Position und stoppt sie dort.
+
+        Ohne das Zurücksetzen der Geschwindigkeit wird die aktuelle
+        Sprung-/Laufgeschwindigkeit mitgenommen und die Figur fällt direkt
+        nach dem Teleport wieder aus dem Zielbereich heraus.
+        """
+        self.spielfigur.center_x = x
+        self.spielfigur.center_y = y
+        self.spielfigur.change_x = 0
+        self.spielfigur.change_y = 0
 
     def on_update(self, delta_time):
 
@@ -1241,12 +1331,17 @@ class Plattformer(arcade.Window):
 
         self.camera.position = (self._clamp(self.spielfigur.position[0], self.width / 2, self.tile_map.width * self.tile_map.tile_width * self.tile_map.scaling - self.width / 2), self._clamp(self.spielfigur.position[1], self.height / 2, self.tile_map.height * self.tile_map.tile_height * self.tile_map.scaling - self.height / 2))
 
-        self.physik_engine.update()
+        if not (self.gewonnen or self.verloren):
+            # Auf dem Endscreen wird die Physik eingefroren, damit die Figur
+            # nicht hinter dem Overlay weiterfällt bzw. weiterläuft.
+            self.physik_engine.update()
+            self.spielerliste.update()
+        else:
+            self.spielfigur.change_x = 0
+            self.spielfigur.change_y = 0
 
         if self.physik_engine.can_jump():
             self._air_jumps_left = 0
-
-        self.spielerliste.update()
 
         if self.physik_engine.can_jump():
             if self.multi_jump:
@@ -1262,52 +1357,38 @@ class Plattformer(arcade.Window):
 
         self.plus2herzen_timer -= delta_time
 
-        # Achievement-Timer aktualisieren
-        self.achievement_timer -= delta_time
-        self.achievement_stack_timer -= delta_time
-
-        # --- NEUE LOGIK FÜR ACHIEVEMENTS (angepasst an deine Beschreibung) ---
-        # Wenn ein neues Achievement empfangen wird
-        if self.achievement_new is not None:
-            # Falls gerade *kein* Achievement angezeigt wird (Timer abgelaufen)
+        # Achievement-Logik:
+        # 1. Nur das gerade sichtbare Achievement läuft ab. Das Achievement
+        #    im Stack behält seine volle Anzeigedauer, bis es nachrückt.
+        # 2. Ein neu freigeschaltetes Achievement wird sofort angezeigt oder
+        #    in den Stack gelegt (und dort nicht von einem neueren
+        #    überschrieben, solange das aktuelle noch läuft).
+        if self.achievement is not None:
+            self.achievement_timer = max(0.0, self.achievement_timer - delta_time)
             if self.achievement_timer <= 0:
-                # Zeige das neue Achievement direkt an
+                self.achievement = None
+                self.achievement_displayed = False
+
+        # Neu freigeschaltetes Achievement annehmen
+        if self.achievement_new is not None:
+            if self.achievement is None:
                 self.achievement = self.achievement_new
                 self.achievement_timer = self.achievement_timer_new
                 self.achievement_displayed = True
-            # Falls gerade *ein* Achievement angezeigt wird (Timer läuft noch)
-            else:
-                # Lege das neue Achievement in den Stack
-                # (Das alte Achievement im Stack würde hier überschrieben)
+            elif self.achievement_stack is None:
                 self.achievement_stack = self.achievement_new
                 self.achievement_stack_timer = self.achievement_timer_new
-            # Zurücksetzen der neuen Achievement-Daten
+            # sonst geht das zusätzliche Achievement verloren (max. 2 Slots)
             self.achievement_new = None
             self.achievement_timer_new = 0.0
 
-        # Wenn das *aktuelle* Achievement fertig angezeigt ist
-        if self.achievement_timer <= 0 and self.achievement is not None:
-            # Verstecke das aktuelle Achievement
-            self.achievement_displayed = False
-            self.achievement = None
-            self.achievement_timer = 0.0
-            # Achievement aus dem Stack (falls vorhanden) wird automatisch im nächsten Frame
-            # (oder sobald ein neues Achievement eintrifft und der Timer <= 0 ist) behandelt
-
-        # Wenn das *aktuelle* Achievement fertig ist UND ein Achievement im Stack wartet
-        if self.achievement_timer <= 0 and self.achievement is None and self.achievement_stack is not None:
-            # Verschiebe das Achievement aus dem Stack ins Haupt-Achievement
+        # Wartendes Achievement nachrücken lassen
+        if self.achievement is None and self.achievement_stack is not None:
             self.achievement = self.achievement_stack
             self.achievement_timer = self.achievement_stack_timer
             self.achievement_displayed = True
-            # Leere den Stack
             self.achievement_stack = None
             self.achievement_stack_timer = 0.0
-
-        if self.achievement_timer <= 0:
-            self.achievement_displayed = False
-            self.achievement = None
-            self.achievement_timer = 0.0
         
         if self.zeit_multi_jump <= 0:
             self.multi_jump = False
@@ -1343,23 +1424,23 @@ class Plattformer(arcade.Window):
                 self.lives += 1
                 self.plus1herz_timer = 3
                 trank.kill()
-                self.trank_player = arcade.play_sound(self.trank_sound)
+                self.trank_player = self._play_sound(self.trank_sound)
             
             hit_list = arcade.check_for_collision_with_list(self.spielfigur, self.tränke_plus_zwei_herzen_spritelist)
             for trank in hit_list:
                 self.lives += 2
                 self.plus2herzen_timer = 3
                 trank.kill()
-                self.trank_player = arcade.play_sound(self.trank_sound)
+                self.trank_player = self._play_sound(self.trank_sound)
 
         hit_list = arcade.check_for_collision_with_list(self.spielfigur, self.schatz_liste)
         for schatz in hit_list:
             self.schätze += 1 # This should be outside the loop if only one treasure is picked up at a time
             schatz.kill()
-            self.item_player = arcade.play_sound(self.item_sound)
+            self.item_player = self._play_sound(self.item_sound)
 
         if arcade.check_for_collision_with_list(self.spielfigur, self.key_schatzraum):
-            self.advancement_player = arcade.play_sound(self.advancement_sound)
+            self.advancement_player = self._play_sound(self.advancement_sound)
 #            for key in arcade.check_for_collision_with_list(self.spielfigur, self.key_schatzraum):
             self.key_schatzraum_have = True
             self.szene.get_sprite_list("Schlüssel Schatz-Raum").clear()
@@ -1372,7 +1453,7 @@ class Plattformer(arcade.Window):
             self.walls = [self.szene.get_sprite_list("Tile Layer 1"), self.szene.get_sprite_list("Röhre"), self.szene.get_sprite_list("Unsichtbare Blöcke")]
             self.szene.get_sprite_list("Activate Schatz-Raum").clear()
             self.szene.get_sprite_list("Schatz-Raum Verschließ-Blöcke").clear()
-            self.advancement_player = arcade.play_sound(self.advancement_sound)
+            self.advancement_player = self._play_sound(self.advancement_sound)
             self.achievement_timer_new = 3
             self.achievement_displayed = True
             self.achievement_new = "Schatzraum geöffnet!"
@@ -1381,7 +1462,7 @@ class Plattformer(arcade.Window):
 #            for key in arcade.check_for_collision_with_list(self.spielfigur, self.key_level_2):
             self.key_level_2_have = True
             self.szene.get_sprite_list("Schlüssel 2").clear()
-            self.advancement_player = arcade.play_sound(self.advancement_sound)
+            self.advancement_player = self._play_sound(self.advancement_sound)
             self.achievement_timer_new = 2
             self.achievement_displayed = True
             self.achievement_new = "Key gefunden!"
@@ -1391,7 +1472,7 @@ class Plattformer(arcade.Window):
             self.walls = [self.szene.get_sprite_list("Tile Layer 1"), self.szene.get_sprite_list("Röhre"), self.szene.get_sprite_list("Unsichtbare Blöcke")]
             self.szene.get_sprite_list("Hebel Level 2").clear()
             self.szene.get_sprite_list("Tor 2").clear()
-            self.advancement_player = arcade.play_sound(self.advancement_sound)
+            self.advancement_player = self._play_sound(self.advancement_sound)
             self.level_3 = True
             self.achievement_timer_new = 4
             self.achievement_displayed = True
@@ -1416,7 +1497,7 @@ class Plattformer(arcade.Window):
 
         if arcade.check_for_collision_with_list(self.spielfigur, self.szene.get_sprite_list("Ziel")):
             if not self.gewonnen_sound_gespielt:
-                self.advancement_player = arcade.play_sound(self.advancement_sound)
+                self.advancement_player = self._play_sound(self.advancement_sound)
                 self.gewonnen_sound_gespielt = True
             self.gewonnen = True
 
@@ -1432,24 +1513,20 @@ class Plattformer(arcade.Window):
             self.schaden_immun = False
             self.schaden_immun_anzeigen = False
 
-        if arcade.check_for_collision_with_list(self.spielfigur, self.szene.get_sprite_list("Teleporter Oben")): 
-            self.spielfigur.center_x = 41
-            self.spielfigur.center_y = 557
+        if arcade.check_for_collision_with_list(self.spielfigur, self.szene.get_sprite_list("Teleporter Oben")):
+            self._teleport(41, 557)
 
-        if arcade.check_for_collision_with_list(self.spielfigur, self.szene.get_sprite_list("Röhre")): 
-            self.spielfigur.center_x = 300
-            self.spielfigur.center_y = 349
-        
-        if arcade.check_for_collision_with_list(self.spielfigur, self.szene.get_sprite_list("Teleporter Münze")): 
-            self.spielfigur.center_x = 278
-            self.spielfigur.center_y = 525
+        if arcade.check_for_collision_with_list(self.spielfigur, self.szene.get_sprite_list("Röhre")):
+            self._teleport(300, 349)
+
+        if arcade.check_for_collision_with_list(self.spielfigur, self.szene.get_sprite_list("Teleporter Münze")):
+            self._teleport(278, 525)
 
         if arcade.check_for_collision_with_list(self.spielfigur, self.szene.get_sprite_list("Schlüssel 1")):
 #            for schlüssel in arcade.check_for_collision_with_list(self.spielfigur, self.szene.get_sprite_list("Schlüssel 1")):
-            self.spielfigur.center_x = 788
-            self.spielfigur.center_y = 370
+            self._teleport(788, 370)
             self.schlüssel_level1 = True
-            self.advancement_player = arcade.play_sound(self.advancement_sound)
+            self.advancement_player = self._play_sound(self.advancement_sound)
             self.szene.get_sprite_list("Schlüssel 1").clear()
             self.achievement_timer_new = 2
             self.achievement_displayed = True
@@ -1459,27 +1536,30 @@ class Plattformer(arcade.Window):
         for münze in hit_list:
             self.münzen += 1 # This should be outside the loop if only one coin is picked up at a time
             münze.kill()
-            self.coin_player = arcade.play_sound(self.coin_sound)
+            self.coin_player = self._play_sound(self.coin_sound)
         
         if self.schaden_immun == False:
             if arcade.check_for_collision_with_list(self.spielfigur, self.szene.get_sprite_list("Stachel")):
-                self.damage_player = arcade.play_sound(self.damage_sound)
+                self.damage_player = self._play_sound(self.damage_sound)
                 self.lives -= 1
-                self.schaden_immun = True
-                self.schaden_immun_timer = 3
-                self.schaden_immun_anzeigen = True
+                # Immunität kommt aus dem Preset (Hardcore = 0.0 Sekunden!).
+                if self.initial_schaden_immun_timer > 0:
+                    self.schaden_immun = True
+                    self.schaden_immun_timer = self.initial_schaden_immun_timer
+                    self.schaden_immun_anzeigen = True
+                else:
+                    self.schaden_immun = False
+                    self.schaden_immun_timer = 0.0
+                    self.schaden_immun_anzeigen = False
                 
         if self.reset == True:
             # Alle eventuell laufenden Sounds stoppen
-            if self.hintergrundmusik_sound:
-                arcade.stop_sound(self.hintergrundmusik_sound)
-            if self.epic_music_sound:
-                arcade.stop_sound(self.epic_music_sound)
-            if self.verloren_sound_player:
-                arcade.stop_sound(self.verloren_sound_player)
+            self._stop_sound("hintergrundmusik_sound")
+            self._stop_sound("epic_music_sound")
+            self._stop_sound("verloren_sound_player")
 
             # Shutdown abspielen und neu initialisieren
-            arcade.play_sound(self.audio_shutdown)
+            self._play_sound(self.audio_shutdown)
             self.reset_gameplay()
             return
 
@@ -1488,12 +1568,13 @@ class Plattformer(arcade.Window):
             self.walls = [self.szene.get_sprite_list("Tile Layer 1"), self.szene.get_sprite_list("Röhre"), self.szene.get_sprite_list("Unsichtbare Blöcke"), self.szene.get_sprite_list("Tor 2"), self.szene.get_sprite_list("Schatz-Raum Verschließ-Blöcke")]
             self.szene.get_sprite_list("Reader 1").clear()
             self.szene.get_sprite_list("Tor 1").clear()
-            self.advancement_player = arcade.play_sound(self.advancement_sound)
+            self.advancement_player = self._play_sound(self.advancement_sound)
             self.achievement_timer_new = 4
             self.achievement_displayed = True
             self.achievement_new = "Level 2 freigeschaltet!"
 
-        if self.lives == 0:
+        if self.lives <= 0:
+            self.lives = 0
             self.verloren = True
             #self.__init__()
 
@@ -1501,14 +1582,14 @@ class Plattformer(arcade.Window):
             if self.level_3 and not self.level3_music_switched:
                 # Hintergrundmusik stoppen
                 if self.hintergrundmusik_sound and self.hintergrundmusik_sound.playing:
-                    arcade.stop_sound(self.hintergrundmusik_sound)
+                    self._stop_sound("hintergrundmusik_sound")
                 
                 # Epische Musik starten (falls noch nicht)
                 if not self.epic_music_sound or not self.epic_music_sound.playing:
-                    self.epic_music_sound = arcade.play_sound(self.epic_music, loop=True)
+                    self.epic_music_sound = self._play_sound(self.epic_music, loop=True)
                 
                 # Achievement-Sound einmal abspielen
-                self.advancement_player = arcade.play_sound(self.advancement_sound)
+                self.advancement_player = self._play_sound(self.advancement_sound)
                 
                 # Flag setzen, damit der Block nicht nochmal ausgeführt wird
                 self.level3_music_switched = True
@@ -1589,7 +1670,6 @@ class Plattformer(arcade.Window):
         self.höher_springen = False
         self.jump_boost = False
         self._air_jumps_left = 0
-        self._air_jumps_left = 0
         self.schaden_immun = False
         self.schaden_immun_anzeigen = False
         self.start_menu = False
@@ -1602,8 +1682,9 @@ class Plattformer(arcade.Window):
         self.achievement_stack = None
         self.achievement_stack_timer = 0.0
         self.achievement = None
-        self.achievement_timer_new = 0.0
         self.highscore_saved = False
+        # Physik-Engine (weiter unten neu erzeugt) auf Standardgravitation
+        self.schaden_immun_timer = self.initial_schaden_immun_timer if self.initial_schaden_immun_timer > 0 else 0.0
 
         # 4. Aktive Sound-Kanäle und Player-Referenzen bereinigen
         self.shutdownsound = None
@@ -1696,9 +1777,9 @@ class Plattformer(arcade.Window):
         if self.multi_jump:
             arcade.draw_text(f"Du hast noch für {round(self.zeit_multi_jump, 1)} Sekunden Multi Jump!", cam_x + 245, cam_y - 280, font_size=24, font_name="Kenney Pixel", anchor_x="right")
         if self.plus1herz:
-            arcade.draw_text(f"+1 Herz", cam_x + 35, cam_y - 150, font_size=24, font_name="Kenney Pixel", anchor_x="right")
+            arcade.draw_text("+1 Herz", cam_x + 35, cam_y - 150, font_size=24, font_name="Kenney Pixel", anchor_x="right")
         if self.plus2herzen:
-            arcade.draw_text(f"+2 Herzen", cam_x + 35, cam_y - 175, font_size=24, font_name="Kenney Pixel", anchor_x="right")
+            arcade.draw_text("+2 Herzen", cam_x + 35, cam_y - 175, font_size=24, font_name="Kenney Pixel", anchor_x="right")
         if self.verbleibende_zeit_show:
             arcade.draw_text(f"Verbleibende Zeit: {round(self.verbleibende_zeit, 1)} Sekunden", cam_x + 385, cam_y + 265, font_size=24, font_name="Kenney Pixel", anchor_x="right")
         if self.genutzte_zeit_show:
@@ -1731,10 +1812,8 @@ class Plattformer(arcade.Window):
             cam_x = self.camera.position[0]
             cam_y = self.camera.position[1]
             self.interact = True
-            if self.hintergrundmusik_sound and self.hintergrundmusik_sound.playing:
-                arcade.stop_sound(self.hintergrundmusik_sound)
-            if self.epic_music_sound and self.epic_music_sound.playing:
-                arcade.stop_sound(self.epic_music_sound)
+            self._stop_sound("hintergrundmusik_sound")
+            self._stop_sound("epic_music_sound")
             arcade.draw_lrbt_rectangle_filled(cam_x - 400, cam_x + 400, cam_y - 300, cam_y + 300, arcade.color.GREEN)
             arcade.draw_text("GEWONNEN", cam_x, cam_y, arcade.color.WHITE, 50, font_name="Kenney Blocks", anchor_x="center", anchor_y="center")
             self._menu_hit_areas = []
@@ -1755,10 +1834,8 @@ class Plattformer(arcade.Window):
             cam_x = self.camera.position[0]
             cam_y = self.camera.position[1]
             self.interact = True
-            if self.hintergrundmusik_sound and self.hintergrundmusik_sound.playing:
-                arcade.stop_sound(self.hintergrundmusik_sound)
-            if self.epic_music_sound and self.epic_music_sound.playing:
-                arcade.stop_sound(self.epic_music_sound)
+            self._stop_sound("hintergrundmusik_sound")
+            self._stop_sound("epic_music_sound")
             arcade.draw_lrbt_rectangle_filled(cam_x - 400, cam_x + 400, cam_y - 300, cam_y + 300, arcade.color.RED)
             arcade.draw_text("VERLOREN", cam_x, cam_y, arcade.color.WHITE, 50, font_name="Kenney Blocks", anchor_x="center", anchor_y="center")
             self._menu_hit_areas = []

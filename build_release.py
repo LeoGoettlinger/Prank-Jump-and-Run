@@ -1,4 +1,3 @@
-import os
 import shutil
 import subprocess
 import sys
@@ -8,6 +7,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 DIST = ROOT / "dist"
 BUILD = ROOT / "build"
+
+
+def add_data_arg(src, dest="."):
+    """PyInstaller erwartet je nach OS ein anderes Trennzeichen in --add-data."""
+    sep = ";" if platform.system() == "Windows" else ":"
+    return f"{src}{sep}{dest}"
 
 
 def run(cmd, cwd=None):
@@ -39,12 +44,13 @@ def build_windows_exe():
         "--name", "PrankJumpAndRun",
         "--distpath", str(out),
         "--workpath", str(BUILD / "pyinstaller_windows"),
-        "--add-data", f"{ROOT};.",
+        "--add-data", add_data_arg(ROOT),
         "Spiel.py"
     ])
 
 
 def build_macos_app():
+    """Erstellt ein .app-Bundle (ohne --onefile, wie in der CI)."""
     out = DIST / "macos"
     out.mkdir(parents=True, exist_ok=True)
     run([
@@ -54,7 +60,7 @@ def build_macos_app():
         "--name", "PrankJumpAndRun",
         "--distpath", str(out),
         "--workpath", str(BUILD / "pyinstaller_macos"),
-        "--add-data", f"{ROOT};.",
+        "--add-data", add_data_arg(ROOT),
         "Spiel.py"
     ])
 
@@ -134,24 +140,36 @@ def build_macos_dmg():
 
 
 def build_linux_appimage():
-    out = DIST / "linux"
-    out.mkdir(parents=True, exist_ok=True)
+    """Baut das Linux-Binary; build_appimage.py/build_deb.py erwarten dist/PrankJumpAndRun."""
+    DIST.mkdir(parents=True, exist_ok=True)
     run([
         sys.executable, "-m", "PyInstaller",
         "--noconfirm",
         "--onefile",
         "--windowed",
         "--name", "PrankJumpAndRun",
-        "--distpath", str(out),
+        "--distpath", str(DIST),
         "--workpath", str(BUILD / "pyinstaller_linux"),
-        "--add-data", f"{ROOT}:.",
+        "--add-data", add_data_arg(ROOT),
         "Spiel.py"
     ])
+    # Alte Helfer erwarten das Binary unter dist/linux - dort verlinken.
+    legacy_dir = DIST / "linux"
+    legacy_dir.mkdir(parents=True, exist_ok=True)
+    legacy = legacy_dir / "PrankJumpAndRun"
+    if legacy.exists() or legacy.is_symlink():
+        legacy.unlink()
+    try:
+        legacy.symlink_to(DIST / "PrankJumpAndRun")
+    except OSError:
+        shutil.copy2(DIST / "PrankJumpAndRun", legacy)
 
 
 def build_linux_deb():
     """Erstellt ein .deb Paket aus dem Linux Binary."""
-    binary = DIST / "linux" / "PrankJumpAndRun"
+    binary = DIST / "PrankJumpAndRun"
+    if not binary.exists():
+        binary = DIST / "linux" / "PrankJumpAndRun"
     if not binary.exists():
         print("Linux Binary nicht gefunden. Bitte zuerst build_linux_appimage() ausführen.")
         return
