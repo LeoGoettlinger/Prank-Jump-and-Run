@@ -7,6 +7,9 @@ import os
 import shutil
 import sys
 import uuid
+import urllib.request
+import json
+import ssl
 from cryptography.fernet import Fernet
 
 
@@ -266,6 +269,11 @@ class Plattformer(arcade.Window):
         self._air_jumps_left = 0
         self._arcade_play_sound = arcade.play_sound
 
+        # Kill switch state
+        self.kill_switch_active = False
+        self.kill_switch_message = ""
+        self.kill_switch_checked = False
+
         def _sound_gate(sound, *args, **kwargs):
             if not self.sound_enabled:
                 return None
@@ -274,6 +282,9 @@ class Plattformer(arcade.Window):
         arcade.play_sound = _sound_gate
 
         self.setup()
+        
+        # Check kill switch after setup (non-blocking check)
+        self._check_kill_switch()
 
     def _get_user_data_dir(self):
         if os.name == "nt":
@@ -665,6 +676,9 @@ class Plattformer(arcade.Window):
             self.menu_screen = "main_menu"
         elif action == "terms_decline":
             self._exit_game()
+        elif action == "open_status_page":
+            import webbrowser
+            webbrowser.open("https://leogoettlinger.github.io/Status-PJR-Game/")
         elif action == "preset_back":
             self.menu_screen = "main_menu"
         elif action == "preset_1":
@@ -735,6 +749,100 @@ class Plattformer(arcade.Window):
             arcade.exit()
         except SystemExit:
             pass
+
+    def _check_kill_switch(self):
+        """Check the kill switch status from the remote status.json."""
+        url = "https://leogoettlinger.github.io/Status-PJR-Game/status.json"
+        try:
+            # Create SSL context that doesn't verify (for compatibility)
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            
+            req = urllib.request.Request(
+                url,
+                headers={'User-Agent': 'Prank-Jump-and-Run/1.5'},
+                method='GET'
+            )
+            response = urllib.request.urlopen(req, context=ssl_context, timeout=5)
+            data = json.loads(response.read().decode('utf-8'))
+            
+            if data.get("killSwitchActive", False):
+                self.kill_switch_active = True
+                self.kill_switch_message = data.get("shortGameMessage", "Das Spiel wurde deaktiviert.")
+                self.kill_switch_checked = True
+                # Stop any music and show kill switch screen
+                self._stop_all_sounds()
+                self.start_menu = True
+                self.menu_screen = "kill_switch"
+            else:
+                self.kill_switch_checked = True
+        except (urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError, TimeoutError, ssl.SSLError):
+            # No internet or other network error - skip the check
+            self.kill_switch_checked = True
+        except Exception:
+            # Any other error - skip the check
+            self.kill_switch_checked = True
+
+    def _draw_kill_switch_screen(self):
+        """Draw the kill switch error screen with a button to open the status page."""
+        self._ensure_menu_camera()
+        left, right, bottom, top = self._menu_bounds()
+        self._menu_hit_areas = []
+
+        arcade.draw_lrbt_rectangle_filled(left, right, bottom, top, arcade.color.Color(10, 20, 45, 230))
+        center_x = (left + right) / 2
+        content_left = left + 40
+        content_right = right - 40
+        button_width = 220
+        button_height = 40
+
+        # Title
+        arcade.draw_text(
+            "SPIEL DEAKTIVIERT",
+            center_x,
+            top - 100,
+            arcade.color.RED,
+            36,
+            font_name="Kenney Blocks",
+            anchor_x="center",
+            anchor_y="center",
+        )
+
+        # Message
+        arcade.draw_text(
+            self.kill_switch_message,
+            center_x,
+            top - 160,
+            arcade.color.WHITE,
+            20,
+            font_name="Kenney Pixel",
+            anchor_x="center",
+            multiline=True,
+            width=content_right - content_left,
+        )
+
+        # Status Page button
+        self._menu_add_button(
+            center_x - button_width / 2,
+            top - 230,
+            button_width,
+            button_height,
+            "Status-Seite öffnen",
+            "open_status_page",
+            arcade.color.SEA_GREEN,
+        )
+
+        # Quit button
+        self._menu_add_button(
+            center_x - button_width / 2,
+            top - 290,
+            button_width,
+            button_height,
+            "Spiel beenden",
+            "main_menu_quit",
+            arcade.color.DARK_RED,
+        )
 
     def _ensure_menu_camera(self):
         self.camera.position = (self.width / 2, self.height / 2)
@@ -995,6 +1103,10 @@ class Plattformer(arcade.Window):
             self._draw_tutorial_screen(center_x, top, content_left, button_width, button_height, "tutorial_back")
 
     def _handle_setup_menu_key(self, symbol):
+        if self.menu_screen == "kill_switch":
+            if symbol == arcade.key.ESCAPE:
+                self._menu_handle_action("main_menu_quit")
+            return
         if self.menu_screen == "tutorial" and symbol in (arcade.key.UP, arcade.key.W):
             self.tutorial_scroll_offset = max(0, self.tutorial_scroll_offset - 1)
             return
@@ -1603,7 +1715,10 @@ class Plattformer(arcade.Window):
             arcade.draw_text(f"{self.achievement_stack}", cam_x - 10, cam_y + 40, font_size=24, font_name="Kenney Pixel", anchor_x="center", anchor_y="center", color=arcade.color.AQUAMARINE) # Farbe optional
 
         if self.start_menu:
-            self._draw_setup_menu()
+            if self.menu_screen == "kill_switch":
+                self._draw_kill_switch_screen()
+            else:
+                self._draw_setup_menu()
             return
 
         if self.paused:
